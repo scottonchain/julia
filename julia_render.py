@@ -1,42 +1,43 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-0.95, 0.95)
-y_range = (-0.95, 0.95)
-c = complex(0.26, -0.04)
+x_range = (-2.2, 1.2)
+y_range = (-2.0, 1.0)
 max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
+C = X + 1j * Y
+Z = np.zeros_like(C)
+burning_ship = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    burning_ship[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
-
+hsv[..., 0] = (0.3 * burning_ship / max_iter + 0.7) % 1
+hsv[..., 1] = 0.7 + 0.3 * (burning_ship / max_iter)
+hsv[..., 2] = (burning_ship / max_iter) ** 0.8
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 3)
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-enhanced = ImageEnhance.Contrast(img).enhance(2.0)
+# Overlay: grid
+step = 0.4
+for val in np.arange(x_range[0], x_range[1] + step, step):
+    x_pix = int((val - x_range[0]) / (x_range[1] - x_range[0]) * width)
+    ImageDraw.Draw(img).line([(x_pix, 0), (x_pix, height)], fill=(255, 210, 210), width=1)
+for val in np.arange(y_range[0], y_range[1] + step, step):
+    y_pix = int((y_range[1] - val) / (y_range[1] - y_range[0]) * height)
+    ImageDraw.Draw(img).line([(0, y_pix), (width, y_pix)], fill=(255, 210, 210), width=1)
+
+img = ImageEnhance.Color(img).enhance(1.2)
+img = ImageEnhance.Contrast(img).enhance(1.1)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
