@@ -1,19 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 
 width, height = 900, 900
-c = complex(-0.7, 0.27015)
+x_range = (-1.15, 1.15)
+y_range = (-0.85, 0.85)
+c = complex(-0.7, 0.27)
 max_iter = 300
-
-# Randomize zoom level and viewport
-random.seed(42)
-zoom_factor = random.uniform(0.1, 2.0)
-center_x = random.uniform(-1.0, 1.0)
-center_y = random.uniform(-1.0, 1.0)
-
-x_range = (center_x - zoom_factor, center_x + zoom_factor)
-y_range = (center_y - zoom_factor, center_y + zoom_factor)
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -31,8 +23,8 @@ for i in range(max_iter):
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='plasma')
-ax.set_title(f'Julia Set (Random Zoom: center=({center_x:.2f},{center_y:.2f}), zoom={zoom_factor:.2f})', fontsize=12)
+               origin='lower', cmap='brg')
+ax.set_title('Julia Set (Bright BRG)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
