@@ -1,50 +1,44 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
-width, height = 950, 950
-x_range = (-0.64, 0.64)
-y_range = (-0.64, 0.64)
-c = complex(0.39, -0.19)
-max_iter = 380
+width, height = 900, 900
+x_range = (-1.07, 1.07)
+y_range = (-0.86, 0.86)
+c = complex(-0.71, 0.23)
+max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-div_iter = np.zeros(Z.shape, dtype=int)
+iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+# Bright cool palette
+from matplotlib import cm
+rgb = cm.cool(smooth_norm)[..., :3]
 
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower')
+ax.set_title('Julia Set (Bright Cool)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-img = img.filter(ImageFilter.FIND_EDGES)
-
-# Horizontal flip every 100 pixels
-def flip_blocks(im, block=100):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], block*2):
-        arr[i:i+block] = arr[i:i+block][::-1]
-    return Image.fromarray(arr)
-
-img = flip_blocks(img, block=100)
-img = ImageEnhance.Contrast(img).enhance(1.8)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
