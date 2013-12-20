@@ -1,51 +1,43 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
-width, height = 900, 900
-x_range = (-2.04, 2.04)
-y_range = (-2.04, 2.04)
-max_iter = 300
+width, height = 1000, 800
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+c = complex(0.3, -0.02)
+max_iter = 350
 
-# Burning Ship fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-ship = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    ship[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.2 * ship / max_iter + 0.8) % 1
-hsv[..., 1] = 0.9 - 0.7 * (ship / max_iter)
-hsv[..., 2] = (ship / max_iter) ** 0.7
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
+
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Julia set as transparency mask
-c = complex(-0.75, 0.15)
-Z2 = X + 1j * Y
-julia = np.zeros(Z2.shape, dtype=int)
-mask = np.ones(Z2.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + c
-    mask_new = np.abs(Z2) <= 2
-    julia[mask & ~mask_new] = i
-    mask = mask_new
-alpha = (julia / max_iter * 255).astype(np.uint8)
-img = img.convert('RGBA')
-img.putalpha(Image.fromarray(alpha))
-
-# Motion blur effect
-img = img.filter(ImageFilter.GaussianBlur(radius=2)).filter(ImageFilter.BoxBlur(3))
-img = img.convert('RGB')
-img = ImageEnhance.Color(img).enhance(2.1)
+img = ImageOps.mirror(img)
+img = ImageOps.flip(img)
+enhanced = ImageEnhance.Color(img).enhance(1.2)
+enhanced = ImageEnhance.Brightness(enhanced).enhance(1.1)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
