@@ -1,68 +1,53 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
-width, height = 1000, 800
-x_range = (-0.76, 0.76)
-y_range = (-0.65, 0.65)
-c = complex(-0.67, -0.43)
-max_iter = 500
+width, height = 1000, 1000
+x_range = (-1.67, 1.67)
+y_range = (-1.52, 1.52)
+c = complex(0.37, 0.32)
+max_iter = 360
 
-# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-# Initialize iteration counts and mask
 div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a unique color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.2 * np.abs(np.cos(3 * np.pi * smooth_norm))  # High saturation
-hsv[..., 2] = smooth_norm ** 0.4  # Bright value
+hsv[..., 0] = (0.4 * smooth_norm + 0.4) % 1
+hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.3
 
-# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Mirrored effect
-def mirror(im):
-    return ImageOps.mirror(im)
+img = img.filter(ImageFilter.EMBOSS)
 
-img = mirror(img)
+# Circular swirl mask overlay
+def swirl_mask(im):
+    arr = np.array(im)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
+    mask = (np.sin(r / 20) > 0)
+    arr[mask] = arr[mask] // 2
+    return Image.fromarray(arr)
 
-# Solarize effect
-img = ImageOps.solarize(img, threshold=128)
+img = swirl_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.5)
 
-# Artistic postprocessing: blur, color, and emboss
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.8)
-enhanced = enhanced.filter(ImageFilter.EMBOSS)
-
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(10, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
