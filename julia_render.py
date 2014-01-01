@@ -1,68 +1,63 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
-width, height = 1000, 800
-x_range = (-0.76, 0.76)
-y_range = (-0.76, 0.76)
-c = complex(-0.7, -0.35)
-max_iter = 500
+width, height = 900, 900
+x_range = (-1.98, 1.98)
+y_range = (-1.98, 1.98)
+max_iter = 300
 
-# Generate grid of complex points
+# Tricorn fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-# Initialize iteration counts and mask
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
+C = X + 1j * Y
+Z = np.zeros_like(C)
+tricorn = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask] = np.conj(Z[mask]) ** 2 + C[mask]
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    tricorn[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Build HSV image with a unique color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.2 * np.abs(np.cos(3 * np.pi * smooth_norm))  # High saturation
-hsv[..., 2] = smooth_norm ** 0.4  # Bright value
-
-# Convert to RGB
+hsv[..., 0] = (0.2 * tricorn / max_iter + 0.8) % 1
+hsv[..., 1] = 0.9 + 0.1 * (tricorn / max_iter)
+hsv[..., 2] = (tricorn / max_iter) ** 0.5
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Mirrored effect
-def mirror(im):
-    return ImageOps.mirror(im)
+# Julia set overlay
+c = complex(0.27, 0.03)
+Z2 = X + 1j * Y
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+julia_img = (julia / max_iter * 255).astype(np.uint8)
+julia_img = Image.fromarray(np.stack([julia_img]*3, axis=-1)).convert('RGBA')
+julia_img.putalpha(80)
+img = img.convert('RGBA')
+img = Image.alpha_composite(img, julia_img)
+img = img.convert('RGB')
 
-img = mirror(img)
+# Color cycling effect
+arr = np.array(img)
+arr = np.roll(arr, shift=30, axis=2)
+img = Image.fromarray(arr)
 
-# Solarize effect
-img = ImageOps.solarize(img, threshold=128)
+# Geometric grid overlay
+draw = ImageDraw.Draw(img)
+for x in range(0, width, 60):
+    draw.line((x, 0, x, height), fill=(255,255,255,60), width=1)
+for y in range(0, height, 60):
+    draw.line((0, y, width, y), fill=(255,255,255,60), width=1)
 
-# Artistic postprocessing: blur, color, and emboss
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.8)
-enhanced = enhanced.filter(ImageFilter.EMBOSS)
+img = ImageEnhance.Color(img).enhance(1.7)
 
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(10, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
