@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
-width, height = 950, 950
-x_range = (-1.42, 1.42)
-y_range = (-1.42, 1.42)
-c = complex(-0.66, -0.37)
-max_iter = 340
+width, height = 900, 900
+x_range = (-1.56, 1.56)
+y_range = (-1.5, 1.5)
+c = complex(-0.76, 0.13)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,25 +26,26 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Green-magenta palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
-hsv[..., 1] = 0.8 - 0.5 * smooth_norm
+hsv[..., 0] = (0.4 * smooth_norm + 0.7) % 1
+hsv[..., 1] = 0.9 - 0.7 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=120)
+img = ImageOps.solarize(img, threshold=80)
 
-# Horizontal banding overlay
-def add_bands(im, band_height=30):
+# Kaleidoscope effect
+def kaleidoscope(im):
     arr = np.array(im)
-    for y in range(0, arr.shape[0], band_height*2):
-        arr[y:y+band_height] = arr[y:y+band_height] // 2
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
     return Image.fromarray(arr)
 
-img = add_bands(img, band_height=40)
-img = ImageEnhance.Color(img).enhance(1.3)
+img = kaleidoscope(img)
+img = ImageEnhance.Color(img).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
