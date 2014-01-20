@@ -1,51 +1,45 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-1.61, 1.61)
-y_range = (-1.61, 1.61)
-c = complex(-0.87, -0.22)
-max_iter = 390
+x_range = (-2.0, 2.0)
+y_range = (-2.0, 2.0)
+max_iter = 340
+p = 0.5667 - 0.5j
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-iteration = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
+C = X + 1j * Y
+Z = np.zeros_like(C)
+Zold = np.zeros_like(C)
+phoenix = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    phoenix[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.15) % 1
-hsv[..., 1] = 0.75
-hsv[..., 2] = smooth_norm ** 0.85
-rgb = hsv_to_rgb(hsv)
+hsv[..., 0] = (0.5 * phoenix / max_iter + 0.2) % 1
+hsv[..., 1] = 0.7 + 0.3 * (phoenix / max_iter)
+hsv[..., 2] = (phoenix / max_iter) ** 0.85
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
-ax.set_title('Julia Set (c = -0.835 - 0.2321i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+# Overlay: grid
+step = 0.4
+for val in np.arange(x_range[0], x_range[1] + step, step):
+    x_pix = int((val - x_range[0]) / (x_range[1] - x_range[0]) * width)
+    ImageDraw.Draw(img).line([(x_pix, 0), (x_pix, height)], fill=(200, 255, 220), width=1)
+for val in np.arange(y_range[0], y_range[1] + step, step):
+    y_pix = int((y_range[1] - val) / (y_range[1] - y_range[0]) * height)
+    ImageDraw.Draw(img).line([(0, y_pix), (width, y_pix)], fill=(200, 255, 220), width=1)
 
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
-sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
+img = ImageEnhance.Color(img).enhance(1.5)
+img = ImageEnhance.Contrast(img).enhance(1.2)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+output_path = 'julia_output.jpg'
+img.save(output_path) 
