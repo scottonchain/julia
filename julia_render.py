@@ -1,58 +1,53 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-0.7, 0.7)
-y_range = (-0.7, 0.7)
-c = complex(-0.7, 0.28)
-max_iter = 500
+x_range = (-0.84, 0.84)
+y_range = (-0.84, 0.84)
+c = complex(0.38, 0.4)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
+# Bright gold palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = 0.12 + 0.08 * smooth_norm
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-
-# Create PIL image and apply enhancements
 img = Image.fromarray(rgb)
 
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
+img = img.filter(ImageFilter.EMBOSS)
 
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
 
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
+img = add_grid(img, step=60)
+img = ImageEnhance.Color(img).enhance(1.7)
 
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+img.save(output_path) 
