@@ -1,53 +1,66 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-0.84, 0.84)
-y_range = (-0.84, 0.84)
-c = complex(0.38, 0.4)
-max_iter = 340
+x_range = (-2.0, 2.0)
+y_range = (-2.0, 2.0)
+c = complex(-0.78, 0.18)
+max_iter = 300
 
+# Julia set
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-
-div_iter = np.zeros(Z.shape, dtype=int)
+julia = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    julia[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Bright gold palette
+# Bright rainbow palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = 0.12 + 0.08 * smooth_norm
-hsv[..., 1] = 0.9 - 0.3 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.5
-
+hsv[..., 0] = (julia / max_iter + 0.3) % 1
+hsv[..., 1] = 0.9 + 0.1 * (julia / max_iter)
+hsv[..., 2] = (julia / max_iter) ** 0.5
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
+# Zoomed Mandelbrot overlay
+mandel = np.zeros(Z.shape, dtype=int)
+C = (X/2) + 1j * (Y/2)
+Z2 = np.zeros_like(C)
+mask = np.ones(C.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + C[mask]
+    mask_new = np.abs(Z2) <= 2
+    mandel[mask & ~mask_new] = i
+    mask = mask_new
+mandel_img = (mandel / max_iter * 255).astype(np.uint8)
+mandel_img = Image.fromarray(np.stack([mandel_img]*3, axis=-1)).convert('RGBA')
+mandel_img.putalpha(80)
+img = img.convert('RGBA')
+img = Image.alpha_composite(img, mandel_img)
+img = img.convert('RGB')
 
-# Grid overlay
-def add_grid(im, step=50):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, step):
-        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
-    for y in range(0, im.height, step):
-        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
-    return im
+# Draw random geometric shapes
+draw = ImageDraw.Draw(img)
+for _ in range(30):
+    shape = np.random.choice(['ellipse', 'rectangle', 'line'])
+    xy = [np.random.randint(0, width), np.random.randint(0, height), np.random.randint(0, width), np.random.randint(0, height)]
+    color = tuple(np.random.randint(100, 255, 3))
+    if shape == 'ellipse':
+        draw.ellipse(xy, outline=color, width=2)
+    elif shape == 'rectangle':
+        draw.rectangle(xy, outline=color, width=2)
+    else:
+        draw.line(xy, fill=color, width=2)
 
-img = add_grid(img, step=60)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = ImageEnhance.Color(img).enhance(2.0)
+img = ImageEnhance.Contrast(img).enhance(1.2)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
