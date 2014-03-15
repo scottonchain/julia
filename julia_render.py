@@ -1,45 +1,40 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-2.0, 2.0)
-y_range = (-2.0, 2.0)
-max_iter = 340
-p = 0.5667 - 0.5j
+x_range = (-1.53, 1.53)
+y_range = (-1.53, 1.53)
+c = complex(-0.79, 0.15)
+max_iter = 800
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-Zold = np.zeros_like(C)
-phoenix = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    phoenix[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.5 * phoenix / max_iter + 0.2) % 1
-hsv[..., 1] = 0.7 + 0.3 * (phoenix / max_iter)
-hsv[..., 2] = (phoenix / max_iter) ** 0.85
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
+
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-
-# Overlay: grid
-step = 0.4
-for val in np.arange(x_range[0], x_range[1] + step, step):
-    x_pix = int((val - x_range[0]) / (x_range[1] - x_range[0]) * width)
-    ImageDraw.Draw(img).line([(x_pix, 0), (x_pix, height)], fill=(200, 255, 220), width=1)
-for val in np.arange(y_range[0], y_range[1] + step, step):
-    y_pix = int((y_range[1] - val) / (y_range[1] - y_range[0]) * height)
-    ImageDraw.Draw(img).line([(0, y_pix), (width, y_pix)], fill=(200, 255, 220), width=1)
-
-img = ImageEnhance.Color(img).enhance(1.5)
-img = ImageEnhance.Contrast(img).enhance(1.2)
+img = ImageEnhance.Color(img).enhance(2.0)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
