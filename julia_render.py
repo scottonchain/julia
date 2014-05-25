@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 width, height = 900, 900
-x_range = (-2.03, 2.03)
-y_range = (-2.03, 2.03)
-c = complex(-0.72, 0.23)
+x_range = (-2.0, 2.0)
+y_range = (-1.93, 1.93)
+c = complex(-0.7, 0.23)
 max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
