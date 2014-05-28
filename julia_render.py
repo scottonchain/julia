@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
-width, height = 900, 900
-x_range = (-1.48, 1.48)
-y_range = (-1.48, 1.48)
-c = complex(-0.84, 0.13)
-max_iter = 370
+width, height = 1000, 1000
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+c = complex(0.24, -0.03)
+max_iter = 400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,26 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Green-magenta palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.4 * smooth_norm + 0.7) % 1
-hsv[..., 1] = 0.9 - 0.7 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = img.filter(ImageFilter.GaussianBlur(radius=7))
 
-# Kaleidoscope effect
-def kaleidoscope(im):
+# Spiral mask overlay
+def spiral_mask(im):
     arr = np.array(im)
-    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
-    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    theta = np.arctan2(Y - cy, X - cx)
+    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
+    arr[mask] = arr[mask] // 2
     return Image.fromarray(arr)
 
-img = kaleidoscope(img)
-img = ImageEnhance.Color(img).enhance(1.8)
+img = spiral_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.6)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
