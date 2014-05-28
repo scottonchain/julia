@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 900, 900
-x_range = (-1.67, 1.67)
-y_range = (-1.56, 1.56)
-c = complex(0.36, 0.36)
-max_iter = 340
+x_range = (-1.7, 1.7)
+y_range = (-1.7, 1.7)
+c = complex(0.42, -0.21)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,27 +26,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.4
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
+img = ImageOps.posterize(img, 2)
 
-# Checkerboard mask overlay
-def checkerboard(im, size=40):
+# Glass tile effect
+def glass_tile(im, tile=30):
     arr = np.array(im)
-    for i in range(0, arr.shape[0], size):
-        for j in range(0, arr.shape[1], size):
-            if (i // size + j // size) % 2 == 0:
-                arr[i:i+size, j:j+size] = arr[i:i+size, j:j+size] // 2
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
     return Image.fromarray(arr)
 
-img = checkerboard(img, size=50)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
