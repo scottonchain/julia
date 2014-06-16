@@ -1,44 +1,48 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.1, 1.1)
-y_range = (-0.84, 0.84)
-c = complex(-0.66, 0.25)
-max_iter = 300
+x_range = (-1.25, 1.25)
+y_range = (-1.25, 1.25)
+c = complex(-0.43, 0.62)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright spring palette
-from matplotlib import cm
-rgb = cm.spring(smooth_norm)[..., :3]
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (Bright Spring)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+def wave_warp(im, amp=10, freq=0.1):
+    arr = np.array(im)
+    for i in range(arr.shape[0]):
+        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
+    return Image.fromarray(arr)
+
+img = wave_warp(img, amp=15, freq=0.15)
+enhanced = ImageEnhance.Color(img).enhance(2.0)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
+
+output_path = 'julia_output.jpg'
+enhanced.save(output_path) 
