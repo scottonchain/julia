@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.25, 1.25)
-y_range = (-1.25, 1.25)
-c = complex(-0.43, 0.62)
-max_iter = 340
+x_range = (-1.41, 1.41)
+y_range = (-1.48, 1.48)
+c = complex(-0.78, 0.2)
+max_iter = 400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,22 +27,16 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.5
+hsv[..., 0] = (0.3 * smooth_norm + 0.7) % 1
+hsv[..., 1] = 0.95 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-def wave_warp(im, amp=10, freq=0.1):
-    arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
-    return Image.fromarray(arr)
-
-img = wave_warp(img, amp=15, freq=0.15)
-enhanced = ImageEnhance.Color(img).enhance(2.0)
-enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
+img = img.filter(ImageFilter.FIND_EDGES)
+enhanced = ImageEnhance.Contrast(img).enhance(2.5)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 enhanced.save(output_path) 
