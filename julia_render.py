@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.51, 0.51)
-y_range = (-0.43, 0.43)
-c = complex(0.29, -0.51)
-max_iter = 350
+x_range = (-0.71, 0.71)
+y_range = (-0.64, 0.64)
+c = complex(0.41, -0.18)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -28,22 +28,23 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
 hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 2)
+img = img.filter(ImageFilter.FIND_EDGES)
 
-def diagonal_wave(im, amp=10, freq=0.12):
+# Horizontal flip every 100 pixels
+def flip_blocks(im, block=100):
     arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i + freq * i)))
+    for i in range(0, arr.shape[0], block*2):
+        arr[i:i+block] = arr[i:i+block][::-1]
     return Image.fromarray(arr)
 
-img = diagonal_wave(img, amp=20, freq=0.18)
-img = img.filter(ImageFilter.DETAIL)
+img = flip_blocks(img, block=100)
+img = ImageEnhance.Contrast(img).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
