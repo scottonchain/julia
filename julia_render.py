@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.71, 1.71)
-y_range = (-1.71, 1.71)
-c = complex(-0.42, -0.6)
-max_iter = 410
+x_range = (-1.44, 1.44)
+y_range = (-1.5, 1.5)
+c = complex(-0.67, -0.37)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,14 +27,14 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.85
+hsv[..., 0] = (0.9 * smooth_norm + 0.05) % 1
+hsv[..., 1] = 0.7
 hsv[..., 2] = smooth_norm ** 0.8
 rgb = hsv_to_rgb(hsv)
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
-ax.set_title('Julia Set (c = -0.4 - 0.59i)', fontsize=14)
+ax.set_title('Julia Set (c = -0.70176 - 0.3842i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
