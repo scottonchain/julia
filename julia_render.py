@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.56, 1.56)
-y_range = (-1.63, 1.63)
-c = complex(0.45, 0.15)
+x_range = (-1.6, 1.6)
+y_range = (-1.6, 1.6)
+c = complex(0.44, 0.14)
 max_iter = 420
 
 x = np.linspace(x_range[0], x_range[1], width)
