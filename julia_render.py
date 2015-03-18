@@ -1,113 +1,62 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageDraw
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.48, 1.48)
-y_range = (-1.48, 1.48)
-c = complex(-0.66, 0.23)
-max_iter = 500
+x_range = (-2.01, 2.01)
+y_range = (-2.01, 2.01)
+max_iter = 300
+p = -0.5 + 0.5j
 
-# Generate grid of complex points
+# Phoenix fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-# Initialize iteration counts and mask
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence with standard tolerance
+C = X + 1j * Y
+Z = np.zeros_like(C)
+Zold = np.zeros_like(C)
+phoenix = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    phoenix[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Build HSV image with a bright color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
-
-# Convert to RGB
+hsv[..., 0] = (0.8 * phoenix / max_iter + 0.1) % 1
+hsv[..., 1] = 0.7 + 0.3 * (phoenix / max_iter)
+hsv[..., 2] = (phoenix / max_iter) ** 0.7
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Create a second image with different tolerance (escape radius = 1.5)
+# Julia set as mask
+c = complex(-0.77, 0.2)
 Z2 = X + 1j * Y
-div_iter2 = np.zeros(Z2.shape, dtype=int)
-mask2 = np.ones(Z2.shape, dtype=bool)
-
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
 for i in range(max_iter):
-    Z2[mask2] = Z2[mask2] ** 2 + c
-    mask_new2 = np.abs(Z2) <= 1.5  # Different tolerance
-    div_iter2[mask2 & ~mask_new2] = i
-    mask2 = mask_new2
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+alpha = (julia / max_iter * 255).astype(np.uint8)
+img = img.convert('RGBA')
+img.putalpha(Image.fromarray(alpha))
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth2 = div_iter2 + 1 - np.log(np.log2(np.abs(Z2)))
-    smooth2 = np.nan_to_num(smooth2)
-smooth_norm2 = (smooth2 - smooth2.min()) / (smooth2.max() - smooth2.min())
+# Channel shuffle
+arr = np.array(img)
+arr[..., 0], arr[..., 1], arr[..., 2] = arr[..., 1], arr[..., 2], arr[..., 0]
+img = Image.fromarray(arr, 'RGBA')
 
-hsv2 = np.zeros((height, width, 3), dtype=float)
-hsv2[..., 0] = (0.8 * smooth_norm2 + 0.1) % 1
-hsv2[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm2))
-hsv2[..., 2] = smooth_norm2 ** 0.2
+# Transparency gradient
+grad = np.linspace(0, 255, height).astype(np.uint8)
+grad = np.tile(grad[:, None], (1, width))
+arr = np.array(img)
+arr[..., 3] = (arr[..., 3].astype(np.float32) * grad / 255).astype(np.uint8)
+img = Image.fromarray(arr, 'RGBA').convert('RGB')
 
-rgb2 = (hsv_to_rgb(hsv2) * 255).astype(np.uint8)
-img2 = Image.fromarray(rgb2)
+img = ImageEnhance.Color(img).enhance(1.7)
 
-# Create a third image with very high tolerance (escape radius = 3.0)
-Z3 = X + 1j * Y
-div_iter3 = np.zeros(Z3.shape, dtype=int)
-mask3 = np.ones(Z3.shape, dtype=bool)
-
-for i in range(max_iter):
-    Z3[mask3] = Z3[mask3] ** 2 + c
-    mask_new3 = np.abs(Z3) <= 3.0  # High tolerance
-    div_iter3[mask3 & ~mask_new3] = i
-    mask3 = mask_new3
-
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth3 = div_iter3 + 1 - np.log(np.log2(np.abs(Z3)))
-    smooth3 = np.nan_to_num(smooth3)
-smooth_norm3 = (smooth3 - smooth3.min()) / (smooth3.max() - smooth3.min())
-
-hsv3 = np.zeros((height, width, 3), dtype=float)
-hsv3[..., 0] = (0.6 * smooth_norm3 + 0.3) % 1
-hsv3[..., 1] = 0.97 - 0.15 * np.abs(np.sin(2 * np.pi * smooth_norm3))
-hsv3[..., 2] = smooth_norm3 ** 0.2
-
-rgb3 = (hsv_to_rgb(hsv3) * 255).astype(np.uint8)
-img3 = Image.fromarray(rgb3)
-
-# Combine the three images side by side
-combined_width = width * 3
-combined_img = Image.new('RGB', (combined_width, height))
-
-# Paste the three images
-combined_img.paste(img, (0, 0))
-combined_img.paste(img2, (width, 0))
-combined_img.paste(img3, (width * 2, 0))
-
-# Add labels
-draw = ImageDraw.Draw(combined_img)
-draw.text((10, 10), "Tolerance = 2.0", fill=(255, 255, 255))
-draw.text((width + 10, 10), "Tolerance = 1.5", fill=(255, 255, 255))
-draw.text((width * 2 + 10, 10), "Tolerance = 3.0", fill=(255, 255, 255))
-
-# Enhance the combined image
-enhanced = ImageEnhance.Color(combined_img).enhance(1.5)
-enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
-
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
