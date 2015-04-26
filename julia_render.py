@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.68, 0.68)
-y_range = (-0.68, 0.68)
-c = complex(-0.44, 0.58)
-max_iter = 360
+x_range = (-1.45, 1.45)
+y_range = (-1.4, 1.4)
+c = complex(-0.72, -0.37)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,24 +27,30 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.85 * smooth_norm + 0.15) % 1
+hsv[..., 1] = 1.0 - 0.5 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.GaussianBlur(radius=8))
-
-# Vertical split mirror
-def vertical_split_mirror(im):
+# Pixel sorting effect
+def pixel_sort(im):
     arr = np.array(im)
-    mid = arr.shape[1] // 2
-    arr[:, mid:] = arr[:, :mid][:, ::-1]
+    for col in arr.transpose(1,0,2):
+        col.sort(axis=0)
     return Image.fromarray(arr)
 
-img = vertical_split_mirror(img)
-img = ImageEnhance.Contrast(img).enhance(1.5)
+img = pixel_sort(img)
+
+def add_stripes(im, stripe_width=20):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, stripe_width*2):
+        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
+    return im
+
+img = add_stripes(img, stripe_width=25)
+img = ImageEnhance.Brightness(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
