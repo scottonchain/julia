@@ -1,51 +1,53 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.99, 1.99)
-y_range = (-1.99, 1.99)
-max_iter = 300
+x_range = (-1.58, 1.58)
+y_range = (-1.58, 1.58)
+c = complex(0.36, 0.32)
+max_iter = 360
 
-# Burning Ship fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-ship = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    ship[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.2 * ship / max_iter + 0.8) % 1
-hsv[..., 1] = 0.9 - 0.7 * (ship / max_iter)
-hsv[..., 2] = (ship / max_iter) ** 0.7
+hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
+
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Julia set as transparency mask
-c = complex(-0.81, 0.19)
-Z2 = X + 1j * Y
-julia = np.zeros(Z2.shape, dtype=int)
-mask = np.ones(Z2.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + c
-    mask_new = np.abs(Z2) <= 2
-    julia[mask & ~mask_new] = i
-    mask = mask_new
-alpha = (julia / max_iter * 255).astype(np.uint8)
-img = img.convert('RGBA')
-img.putalpha(Image.fromarray(alpha))
-
-# Motion blur effect
-img = img.filter(ImageFilter.GaussianBlur(radius=2)).filter(ImageFilter.BoxBlur(3))
+img = img.quantize(colors=12, method=2)
 img = img.convert('RGB')
-img = ImageEnhance.Color(img).enhance(2.1)
+
+# Circular vignette
+def vignette(im):
+    arr = np.array(im).astype(np.float32)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
+    arr[mask] = arr[mask] * 0.3
+    return Image.fromarray(arr.astype(np.uint8))
+
+img = vignette(img)
+img = ImageEnhance.Contrast(img).enhance(1.4)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
