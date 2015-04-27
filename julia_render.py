@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.72, 0.72)
-y_range = (-0.79, 0.79)
-c = complex(0.36, 0.35)
-max_iter = 340
+x_range = (-0.89, 0.89)
+y_range = (-0.89, 0.89)
+c = complex(0.25, 0.04)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,28 +26,17 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright gold palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = 0.12 + 0.08 * smooth_norm
-hsv[..., 1] = 0.9 - 0.3 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.5
+hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
-
-# Grid overlay
-def add_grid(im, step=50):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, step):
-        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
-    for y in range(0, im.height, step):
-        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
-    return im
-
-img = add_grid(img, step=60)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = ImageOps.posterize(img, 3)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+enhanced = ImageEnhance.Contrast(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
