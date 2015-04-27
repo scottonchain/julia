@@ -1,45 +1,52 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-1.09, 1.09)
-y_range = (-0.81, 0.81)
-c = complex(-0.74, 0.3)
-max_iter = 500
+x_range = (-1.69, 1.69)
+y_range = (-1.76, 1.76)
+c = complex(0.36, -0.24)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Use bright, warm prismatic colormap
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='plasma', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.7 + 0.27015i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+# Metallic palette
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+img = ImageOps.posterize(img, 2)
+
+# Glass tile effect
+def glass_tile(im, tile=30):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
+    return Image.fromarray(arr)
+
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
