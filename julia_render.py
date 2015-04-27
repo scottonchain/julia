@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.69, 1.69)
-y_range = (-1.76, 1.76)
-c = complex(0.36, -0.24)
-max_iter = 380
+x_range = (-1.21, 1.21)
+y_range = (-1.21, 1.21)
+c = complex(-0.53, 0.54)
+max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,27 +26,24 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
-hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
-hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.7 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 1.0 - 0.6 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.8
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 2)
-
-# Glass tile effect
-def glass_tile(im, tile=30):
+# Pixel sorting effect
+def pixel_sort(im):
     arr = np.array(im)
-    for i in range(0, arr.shape[0], tile):
-        for j in range(0, arr.shape[1], tile):
-            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
+    for row in arr:
+        row.sort(axis=0)
     return Image.fromarray(arr)
 
-img = glass_tile(img, tile=40)
-img = ImageEnhance.Contrast(img).enhance(1.6)
+img = pixel_sort(img)
+enhanced = ImageEnhance.Color(img).enhance(2.5)
+enhanced = ImageEnhance.Brightness(enhanced).enhance(1.3)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
