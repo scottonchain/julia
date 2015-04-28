@@ -1,51 +1,57 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.91, 1.91)
-y_range = (-1.91, 1.91)
-max_iter = 300
+x_range = (-1.71, 1.71)
+y_range = (-1.71, 1.71)
+c = complex(0.38, -0.26)
+max_iter = 380
 
-# Burning Ship fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-ship = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    ship[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.2 * ship / max_iter + 0.8) % 1
-hsv[..., 1] = 0.9 - 0.7 * (ship / max_iter)
-hsv[..., 2] = (ship / max_iter) ** 0.7
+hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.9 - 0.7 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
+
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Julia set as transparency mask
-c = complex(-0.8, 0.13)
-Z2 = X + 1j * Y
-julia = np.zeros(Z2.shape, dtype=int)
-mask = np.ones(Z2.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + c
-    mask_new = np.abs(Z2) <= 2
-    julia[mask & ~mask_new] = i
-    mask = mask_new
-alpha = (julia / max_iter * 255).astype(np.uint8)
-img = img.convert('RGBA')
-img.putalpha(Image.fromarray(alpha))
+# Shuffle in blocks
+def shuffle_blocks(im, block=40):
+    arr = np.array(im)
+    blocks = []
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            blocks.append(arr[i:i+block, j:j+block].copy())
+    np.random.shuffle(blocks)
+    idx = 0
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            arr[i:i+block, j:j+block] = blocks[idx]
+            idx += 1
+    return Image.fromarray(arr)
 
-# Motion blur effect
-img = img.filter(ImageFilter.GaussianBlur(radius=2)).filter(ImageFilter.BoxBlur(3))
-img = img.convert('RGB')
-img = ImageEnhance.Color(img).enhance(2.1)
+img = shuffle_blocks(img, block=60)
+img = ImageOps.posterize(img, 2)
+img = ImageEnhance.Color(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
