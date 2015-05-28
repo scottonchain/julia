@@ -3,8 +3,8 @@ from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-2.02, 2.02)
-y_range = (-2.02, 2.02)
+x_range = (-1.92, 1.92)
+y_range = (-1.99, 1.99)
 max_iter = 300
 
 # Tricorn fractal
@@ -29,7 +29,7 @@ rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Julia set overlay
-c = complex(0.25, 0.02)
+c = complex(0.27, -0.02)
 Z2 = X + 1j * Y
 julia = np.zeros(Z2.shape, dtype=int)
 mask = np.ones(Z2.shape, dtype=bool)
