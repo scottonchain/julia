@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.5, 1.5)
-y_range = (-1.5, 1.5)
-c = complex(0.32, 0.06)
-max_iter = 400
+x_range = (-1.66, 1.66)
+y_range = (-1.66, 1.66)
+c = complex(0.35, -0.25)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,40 +26,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Sepia palette
-def sepia(im):
-    arr = np.array(im).astype(np.float32)
-    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-    tr = 0.393 * r + 0.769 * g + 0.189 * b
-    tg = 0.349 * r + 0.686 * g + 0.168 * b
-    tb = 0.272 * r + 0.534 * g + 0.131 * b
-    arr[..., 0] = np.clip(tr, 0, 255)
-    arr[..., 1] = np.clip(tg, 0, 255)
-    arr[..., 2] = np.clip(tb, 0, 255)
-    return Image.fromarray(arr.astype(np.uint8))
-
+# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.1 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.4 + 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-img = sepia(img)
-img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-# Spiral mask overlay
-def spiral_mask(im):
+img = ImageOps.posterize(img, 2)
+
+# Glass tile effect
+def glass_tile(im, tile=30):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    theta = np.arctan2(Y - cy, X - cx)
-    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
-    arr[mask] = arr[mask] // 2
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
     return Image.fromarray(arr)
 
-img = spiral_mask(img)
-img = ImageEnhance.Contrast(img).enhance(1.3)
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
