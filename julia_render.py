@@ -1,42 +1,45 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 width, height = 1600, 1600
-x_range = (-0.93, 0.93)
-y_range = (-0.93, 0.93)
-c = complex(0.27, 0.0)
-max_iter = 350
+# Zoomed in region for detail
+x_range = (-0.54, 0.54)
+y_range = (-0.54, 0.54)
+c = complex(0.24, -0.04)
+max_iter = 1400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-div_iter = np.zeros(Z.shape, dtype=int)
+iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+# Use bright, warm prismatic colormap
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='cool', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = 0.285 + 0.013i)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
 
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
-img = ImageOps.posterize(img, 3)
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-enhanced = ImageEnhance.Contrast(img).enhance(2.0)
-
-output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
