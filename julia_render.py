@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.7, 0.7)
-y_range = (-0.7, 0.7)
-c = complex(0.41, -0.17)
-max_iter = 380
+x_range = (-0.8, 0.8)
+y_range = (-0.48, 0.48)
+c = complex(0.39, -0.36)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -34,17 +34,16 @@ hsv[..., 2] = smooth_norm ** 0.2
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.FIND_EDGES)
+# Duotone palette
+def duotone(im, color1=(30, 30, 120), color2=(220, 220, 60)):
+    arr = np.array(im).astype(np.float32) / 255.0
+    mask = arr[..., 0] > 0.5
+    arr[mask] = np.array(color1) / 255.0
+    arr[~mask] = np.array(color2) / 255.0
+    return Image.fromarray((arr * 255).astype(np.uint8))
 
-# Horizontal flip every 100 pixels
-def flip_blocks(im, block=100):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], block*2):
-        arr[i:i+block] = arr[i:i+block][::-1]
-    return Image.fromarray(arr)
-
-img = flip_blocks(img, block=100)
-img = ImageEnhance.Contrast(img).enhance(1.8)
+img = duotone(img)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
