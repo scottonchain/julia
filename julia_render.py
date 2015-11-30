@@ -1,41 +1,37 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.11, 1.11)
-y_range = (-0.93, 0.93)
-c = complex(-0.72, 0.25)
+x_range = (-2.0, 2.0)
+y_range = (-2.06, 2.06)
+c = complex(-0.75, 0.26)
 max_iter = 300
 
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0], x_range[1], width, dtype=np.float32)
+y = np.linspace(y_range[0], y_range[1], height, dtype=np.float32)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+iteration = np.full(Z.shape, max_iter, dtype=np.uint16)
 mask = np.ones(Z.shape, dtype=bool)
+escape_radius = 4.0
 
 for i in range(max_iter):
+    if not np.any(mask):
+        break
     Z[mask] = Z[mask] ** 2 + c
-    mask_new = np.abs(Z) <= 2
+    mask_new = np.abs(Z) <= escape_radius
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Bright cool palette
-from matplotlib import cm
-rgb = cm.cool(smooth_norm)[..., :3]
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (Bright Cool)', fontsize=14)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Optimized)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
