@@ -4,10 +4,10 @@ import matplotlib.cm as cm
 
 width, height = 1600, 1600
 # Zoomed in region for detail
-x_range = (-0.79, 0.79)
-y_range = (-0.6, 0.6)
-c = complex(-0.81, 0.13)
-max_iter = 1300
+x_range = (-0.54, 0.54)
+y_range = (-0.48, 0.48)
+c = complex(0.25, 0.0)
+max_iter = 1400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -30,8 +30,8 @@ with np.errstate(divide='ignore', invalid='ignore'):
 # Use bright, warm prismatic colormap
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='winter', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.8 + 0.156i)', fontsize=14)
+               origin='lower', cmap='cool', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = 0.285 + 0.013i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
