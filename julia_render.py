@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.75, 0.75)
-y_range = (-0.57, 0.57)
-c = complex(-0.78, 0.13)
-max_iter = 370
+x_range = (-1.79, 1.79)
+y_range = (-1.79, 1.79)
+c = complex(0.28, -0.47)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,30 +26,25 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Bright rainbow palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.95 - 0.4 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.4
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
-# Circular pixel sort
-def circular_pixel_sort(im):
+def vertical_wave(im, amp=12, freq=0.09):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
+    for j in range(arr.shape[1]):
+        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
     return Image.fromarray(arr)
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = vertical_wave(img, amp=18, freq=0.13)
+img = ImageEnhance.Color(img).enhance(1.7)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
