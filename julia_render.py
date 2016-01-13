@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.36, 1.36)
-y_range = (-1.22, 1.22)
-c = complex(-0.43, 0.63)
+x_range = (-1.35, 1.35)
+y_range = (-1.42, 1.42)
+c = complex(-0.7, -0.39)
 max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -27,22 +27,23 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
+hsv[..., 0] = (0.45 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-def wave_warp(im, amp=10, freq=0.1):
-    arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
-    return Image.fromarray(arr)
+img = img.filter(ImageFilter.MedianFilter(size=7))
 
-img = wave_warp(img, amp=15, freq=0.15)
-enhanced = ImageEnhance.Color(img).enhance(2.0)
-enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
+def add_stripes(im, stripe_width=20):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, stripe_width*2):
+        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
+    return im
+
+img = add_stripes(img, stripe_width=30)
+img = ImageEnhance.Brightness(img).enhance(1.2)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
