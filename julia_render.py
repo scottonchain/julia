@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.79, 0.79)
-y_range = (-0.6, 0.6)
-c = complex(-0.83, 0.12)
-max_iter = 370
+x_range = (-0.65, 0.65)
+y_range = (-0.79, 0.79)
+c = complex(-0.4, 0.56)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -34,22 +34,17 @@ hsv[..., 2] = smooth_norm ** 0.2
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-# Circular pixel sort
-def circular_pixel_sort(im):
+# Vertical split mirror
+def vertical_split_mirror(im):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
+    mid = arr.shape[1] // 2
+    arr[:, mid:] = arr[:, :mid][:, ::-1]
     return Image.fromarray(arr)
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = vertical_split_mirror(img)
+img = ImageEnhance.Contrast(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
