@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.75, 1.75)
-y_range = (-1.81, 1.81)
-c = complex(0.24, -0.51)
-max_iter = 350
+x_range = (-1.64, 1.64)
+y_range = (-1.64, 1.64)
+c = complex(0.39, 0.39)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,25 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright rainbow palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.95 - 0.4 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.4
+hsv[..., 0] = (0.4 * smooth_norm + 0.4) % 1
+hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.3
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+img = img.filter(ImageFilter.EMBOSS)
 
-def vertical_wave(im, amp=12, freq=0.09):
+# Circular swirl mask overlay
+def swirl_mask(im):
     arr = np.array(im)
-    for j in range(arr.shape[1]):
-        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
+    mask = (np.sin(r / 20) > 0)
+    arr[mask] = arr[mask] // 2
     return Image.fromarray(arr)
 
-img = vertical_wave(img, amp=18, freq=0.13)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = swirl_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
