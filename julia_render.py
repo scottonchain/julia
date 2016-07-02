@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.72, 0.72)
-y_range = (-0.59, 0.59)
-c = complex(-0.72, 0.26)
-max_iter = 500
+x_range = (-1.5, 1.5)
+y_range = (-1.44, 1.44)
+c = complex(0.27, 0.01)
+max_iter = 400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -15,44 +15,37 @@ Z = X + 1j * Y
 
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.5 * smooth_norm + 0.4) % 1
+hsv[..., 1] = 0.9
+hsv[..., 2] = smooth_norm ** 0.7
+rgb = hsv_to_rgb(hsv)
 
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
+ax.set_title('Julia Set (c = 0.285 + 0.013i)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
 
-# Create PIL image and apply enhancements
-img = Image.fromarray(rgb)
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
+sm.set_array([])
+cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
 
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
-
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
-
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
-
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
-output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
