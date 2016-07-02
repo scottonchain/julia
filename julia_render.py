@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.79, 1.79)
-y_range = (-1.79, 1.79)
-c = complex(-0.73, -0.4)
-max_iter = 350
+x_range = (-1.38, 1.38)
+y_range = (-1.38, 1.38)
+c = complex(-0.72, -0.42)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,34 +26,25 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Pastel palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.4 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.5
+hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
+hsv[..., 1] = 0.8 - 0.5 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Heavy pixelation
-def pixelate(im, block=20):
+img = ImageOps.solarize(img, threshold=120)
+
+# Horizontal banding overlay
+def add_bands(im, band_height=30):
     arr = np.array(im)
-    for i in range(0, arr.shape[0], block):
-        for j in range(0, arr.shape[1], block):
-            arr[i:i+block, j:j+block] = arr[i, j]
+    for y in range(0, arr.shape[0], band_height*2):
+        arr[y:y+band_height] = arr[y:y+band_height] // 2
     return Image.fromarray(arr)
 
-img = pixelate(img, block=30)
-
-# Vertical split mirror
-def vertical_split_mirror(im):
-    arr = np.array(im)
-    mid = arr.shape[1] // 2
-    arr[:, mid:] = arr[:, :mid][:, ::-1]
-    return Image.fromarray(arr)
-
-img = vertical_split_mirror(img)
-img = ImageEnhance.Color(img).enhance(1.5)
+img = add_bands(img, band_height=40)
+img = ImageEnhance.Color(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
