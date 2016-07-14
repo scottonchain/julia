@@ -3,9 +3,9 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.38, 1.38)
-y_range = (-1.38, 1.38)
-c = complex(-0.72, -0.42)
+x_range = (-1.48, 1.48)
+y_range = (-1.31, 1.31)
+c = complex(-0.68, -0.36)
 max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
