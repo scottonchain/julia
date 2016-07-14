@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-1.08, 1.08)
-y_range = (-0.85, 0.85)
-c = complex(-0.72, 0.25)
+x_range = (-1.98, 1.98)
+y_range = (-1.92, 1.92)
+c = complex(-0.65, 0.23)
 max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -23,8 +23,8 @@ for i in range(max_iter):
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='winter')
-ax.set_title('Julia Set (Bright Winter)', fontsize=14)
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Vectorized)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
