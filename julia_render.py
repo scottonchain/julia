@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.48, 1.48)
-y_range = (-1.31, 1.31)
-c = complex(-0.68, -0.36)
-max_iter = 340
+x_range = (-1.58, 1.58)
+y_range = (-1.44, 1.44)
+c = complex(-0.76, 0.11)
+max_iter = 400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,25 +26,30 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Deep blue palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
-hsv[..., 1] = 0.8 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = 0.6 + 0.1 * smooth_norm
+hsv[..., 1] = 0.7 + 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.8
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=120)
+img = img.filter(ImageFilter.GaussianBlur(radius=10))
 
-# Horizontal banding overlay
-def add_bands(im, band_height=30):
-    arr = np.array(im)
-    for y in range(0, arr.shape[0], band_height*2):
-        arr[y:y+band_height] = arr[y:y+band_height] // 2
-    return Image.fromarray(arr)
+# Radial gradient overlay
+def radial_gradient(im):
+    arr = np.array(im).astype(np.float32)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
+    mask = r / r.max()
+    for c in range(3):
+        arr[..., c] = arr[..., c] * (1 - 0.5 * mask)
+    return Image.fromarray(arr.astype(np.uint8))
 
-img = add_bands(img, band_height=40)
-img = ImageEnhance.Color(img).enhance(1.3)
+img = radial_gradient(img)
+img = ImageEnhance.Brightness(img).enhance(1.1)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
