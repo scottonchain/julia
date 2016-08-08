@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.42, 0.42)
-y_range = (-0.86, -0.04)
-c = complex(0.24, -0.54)
-max_iter = 350
+x_range = (-1.27, 1.27)
+y_range = (-1.14, 1.14)
+c = complex(-0.55, 0.57)
+max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,23 +27,23 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.7 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 1.0 - 0.6 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.8
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 2)
-
-def diagonal_wave(im, amp=10, freq=0.12):
+# Pixel sorting effect
+def pixel_sort(im):
     arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i + freq * i)))
+    for row in arr:
+        row.sort(axis=0)
     return Image.fromarray(arr)
 
-img = diagonal_wave(img, amp=20, freq=0.18)
-img = img.filter(ImageFilter.DETAIL)
+img = pixel_sort(img)
+enhanced = ImageEnhance.Color(img).enhance(2.5)
+enhanced = ImageEnhance.Brightness(enhanced).enhance(1.3)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
