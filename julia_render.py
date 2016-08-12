@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.89, 0.89)
-y_range = (-0.95, 0.95)
-c = complex(0.33, 0.0)
-max_iter = 350
+x_range = (-1.48, 1.48)
+y_range = (-1.53, 1.53)
+c = complex(0.32, 0.05)
+max_iter = 900
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -33,10 +33,8 @@ hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-
-img = ImageOps.posterize(img, 3)
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-enhanced = ImageEnhance.Contrast(img).enhance(2.0)
+img = ImageEnhance.Color(img).enhance(2.0)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
