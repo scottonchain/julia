@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.73, 1.73)
-y_range = (-1.64, 1.64)
-c = complex(0.35, -0.17)
-max_iter = 380
+x_range = (-1.96, 1.96)
+y_range = (-1.96, 1.96)
+c = complex(0.24, 0.01)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,27 +26,18 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
-hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
-hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 2)
-
-# Glass tile effect
-def glass_tile(im, tile=30):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], tile):
-        for j in range(0, arr.shape[1], tile):
-            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
-    return Image.fromarray(arr)
-
-img = glass_tile(img, tile=40)
-img = ImageEnhance.Contrast(img).enhance(1.6)
+img = ImageOps.mirror(img)
+img = ImageOps.flip(img)
+enhanced = ImageEnhance.Color(img).enhance(1.2)
+enhanced = ImageEnhance.Brightness(enhanced).enhance(1.1)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
