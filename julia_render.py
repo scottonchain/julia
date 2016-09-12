@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.67, 0.67)
-y_range = (-0.93, 0.93)
-c = complex(-0.61, 0.43)
-max_iter = 320
+x_range = (-0.81, 0.81)
+y_range = (-0.81, 0.81)
+c = complex(0.35, 0.37)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,36 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Bright gold palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = 0.12 + 0.08 * smooth_norm
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Sepia tone
-def sepia(im):
-    arr = np.array(im).astype(np.float32)
-    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-    tr = 0.393 * r + 0.769 * g + 0.189 * b
-    tg = 0.349 * r + 0.686 * g + 0.168 * b
-    tb = 0.272 * r + 0.534 * g + 0.131 * b
-    arr[..., 0] = np.clip(tr, 0, 255)
-    arr[..., 1] = np.clip(tg, 0, 255)
-    arr[..., 2] = np.clip(tb, 0, 255)
-    return Image.fromarray(arr.astype(np.uint8))
+img = img.filter(ImageFilter.EMBOSS)
 
-img = sepia(img)
-img = img.filter(ImageFilter.GaussianBlur(radius=6))
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
 
-def vertical_wave(im, amp=12, freq=0.09):
-    arr = np.array(im)
-    for j in range(arr.shape[1]):
-        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
-    return Image.fromarray(arr)
-
-img = vertical_wave(img, amp=18, freq=0.13)
+img = add_grid(img, step=60)
+img = ImageEnhance.Color(img).enhance(1.7)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
