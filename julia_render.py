@@ -1,33 +1,52 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.12, 1.12)
-y_range = (-0.82, 0.82)
-c = complex(-0.66, 0.24)
-max_iter = 300
+x_range = (-1.5, 1.5)
+y_range = (-1.5, 1.5)
+c = complex(0.29, -0.03)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='rainbow')
-ax.set_title('Julia Set (Bright Rainbow)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = 0.0
+hsv[..., 1] = 0.0
+hsv[..., 2] = smooth_norm ** 0.8
+
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
+
+img = img.filter(ImageFilter.FIND_EDGES)
+img = ImageEnhance.Contrast(img).enhance(2.5)
+
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
+
+img = add_grid(img, step=60)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
