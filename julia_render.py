@@ -1,48 +1,40 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-1.33, 1.33)
-y_range = (-1.23, 1.23)
-c = complex(-0.4, 0.61)
-max_iter = 340
+x_range = (-2.08, 2.08)
+y_range = (-1.93, 1.93)
+c = complex(-0.69, 0.29)
+max_iter = 300
 
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0], x_range[1], width, dtype=np.float32)
+y = np.linspace(y_range[0], y_range[1], height, dtype=np.float32)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-div_iter = np.zeros(Z.shape, dtype=int)
+iteration = np.full(Z.shape, max_iter, dtype=np.uint16)
 mask = np.ones(Z.shape, dtype=bool)
+escape_radius = 4.0
+
 for i in range(max_iter):
+    if not np.any(mask):
+        break
     Z[mask] = Z[mask] ** 2 + c
-    mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    mask_new = np.abs(Z) <= escape_radius
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.5
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Optimized)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
-
-def wave_warp(im, amp=10, freq=0.1):
-    arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
-    return Image.fromarray(arr)
-
-img = wave_warp(img, amp=15, freq=0.15)
-enhanced = ImageEnhance.Color(img).enhance(2.0)
-enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
-
-output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
