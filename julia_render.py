@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 width, height = 1600, 1600
-x_range = (-1.19, 1.19)
-y_range = (-0.86, 0.86)
-c = complex(-0.71, 0.32)
-max_iter = 300
+# Zoomed in region for detail
+x_range = (-0.77, 0.77)
+y_range = (-0.59, 0.59)
+c = complex(-0.79, 0.16)
+max_iter = 1300
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -14,19 +16,29 @@ Z = X + 1j * Y
 
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring for better detail
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+
+# Use bright, warm prismatic colormap
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='hsv')
-ax.set_title('Julia Set (Bright HSV)', fontsize=14)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='winter', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = -0.8 + 0.156i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
