@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.99, 1.99)
-y_range = (-1.99, 1.99)
-c = complex(0.32, -0.03)
+x_range = (-0.68, 0.68)
+y_range = (-0.51, 0.51)
+c = complex(0.4, -0.39)
 max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -28,16 +28,22 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
 hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.mirror(img)
-img = ImageOps.flip(img)
-enhanced = ImageEnhance.Color(img).enhance(1.2)
-enhanced = ImageEnhance.Brightness(enhanced).enhance(1.1)
+# Duotone palette
+def duotone(im, color1=(30, 30, 120), color2=(220, 220, 60)):
+    arr = np.array(im).astype(np.float32) / 255.0
+    mask = arr[..., 0] > 0.5
+    arr[mask] = np.array(color1) / 255.0
+    arr[~mask] = np.array(color2) / 255.0
+    return Image.fromarray((arr * 255).astype(np.uint8))
+
+img = duotone(img)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
