@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.39, 1.39)
-y_range = (-1.48, 1.48)
-c = complex(-0.67, -0.38)
-max_iter = 340
+x_range = (-1.64, 1.64)
+y_range = (-1.64, 1.64)
+c = complex(0.39, 0.35)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,30 +27,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.85 * smooth_norm + 0.15) % 1
-hsv[..., 1] = 1.0 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Pixel sorting effect
-def pixel_sort(im):
-    arr = np.array(im)
-    for col in arr.transpose(1,0,2):
-        col.sort(axis=0)
-    return Image.fromarray(arr)
+img = img.quantize(colors=12, method=2)
+img = img.convert('RGB')
 
-img = pixel_sort(img)
+# Circular vignette
+def vignette(im):
+    arr = np.array(im).astype(np.float32)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
+    arr[mask] = arr[mask] * 0.3
+    return Image.fromarray(arr.astype(np.uint8))
 
-def add_stripes(im, stripe_width=20):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, stripe_width*2):
-        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
-    return im
-
-img = add_stripes(img, stripe_width=25)
-img = ImageEnhance.Brightness(img).enhance(1.3)
+img = vignette(img)
+img = ImageEnhance.Contrast(img).enhance(1.4)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
