@@ -1,68 +1,62 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-import matplotlib.pyplot as plt
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-0.74, 0.74)
-y_range = (-0.69, 0.69)
-c = complex(-0.73, -0.42)
-max_iter = 500
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+max_iter = 300
+p = -0.5 + 0.5j
 
-# Generate grid of complex points
+# Phoenix fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-# Initialize iteration counts and mask
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
+C = X + 1j * Y
+Z = np.zeros_like(C)
+Zold = np.zeros_like(C)
+phoenix = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    phoenix[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Build HSV image with a unique color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.2 * np.abs(np.cos(3 * np.pi * smooth_norm))  # High saturation
-hsv[..., 2] = smooth_norm ** 0.4  # Bright value
-
-# Convert to RGB
+hsv[..., 0] = (0.8 * phoenix / max_iter + 0.1) % 1
+hsv[..., 1] = 0.7 + 0.3 * (phoenix / max_iter)
+hsv[..., 2] = (phoenix / max_iter) ** 0.7
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Mirrored effect
-def mirror(im):
-    return ImageOps.mirror(im)
+# Julia set as mask
+c = complex(-0.85, 0.12)
+Z2 = X + 1j * Y
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+alpha = (julia / max_iter * 255).astype(np.uint8)
+img = img.convert('RGBA')
+img.putalpha(Image.fromarray(alpha))
 
-img = mirror(img)
+# Channel shuffle
+arr = np.array(img)
+arr[..., 0], arr[..., 1], arr[..., 2] = arr[..., 1], arr[..., 2], arr[..., 0]
+img = Image.fromarray(arr, 'RGBA')
 
-# Solarize effect
-img = ImageOps.solarize(img, threshold=128)
+# Transparency gradient
+grad = np.linspace(0, 255, height).astype(np.uint8)
+grad = np.tile(grad[:, None], (1, width))
+arr = np.array(img)
+arr[..., 3] = (arr[..., 3].astype(np.float32) * grad / 255).astype(np.uint8)
+img = Image.fromarray(arr, 'RGBA').convert('RGB')
 
-# Artistic postprocessing: blur, color, and emboss
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.8)
-enhanced = enhanced.filter(ImageFilter.EMBOSS)
+img = ImageEnhance.Color(img).enhance(1.7)
 
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(10, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
