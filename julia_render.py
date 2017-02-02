@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.64, 1.64)
-y_range = (-1.64, 1.64)
-c = complex(0.39, 0.35)
-max_iter = 360
+x_range = (-0.72, 0.72)
+y_range = (-0.65, 0.65)
+c = complex(0.42, -0.23)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,27 +27,24 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.5
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.quantize(colors=12, method=2)
-img = img.convert('RGB')
+img = img.filter(ImageFilter.FIND_EDGES)
 
-# Circular vignette
-def vignette(im):
-    arr = np.array(im).astype(np.float32)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
-    arr[mask] = arr[mask] * 0.3
-    return Image.fromarray(arr.astype(np.uint8))
+# Horizontal flip every 100 pixels
+def flip_blocks(im, block=100):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], block*2):
+        arr[i:i+block] = arr[i:i+block][::-1]
+    return Image.fromarray(arr)
 
-img = vignette(img)
-img = ImageEnhance.Contrast(img).enhance(1.4)
+img = flip_blocks(img, block=100)
+img = ImageEnhance.Contrast(img).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
