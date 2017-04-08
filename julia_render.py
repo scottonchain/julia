@@ -3,8 +3,8 @@ from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.53, 1.53)
-y_range = (-1.53, 1.53)
+x_range = (-1.52, 1.52)
+y_range = (-1.43, 1.43)
 max_iter = 300
 
 # Multibrot (power 3)
@@ -29,7 +29,7 @@ rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Julia set as mask
-c = complex(-0.79, 0.19)
+c = complex(-0.84, 0.16)
 Z2 = X + 1j * Y
 julia = np.zeros(Z2.shape, dtype=int)
 mask = np.ones(Z2.shape, dtype=bool)
