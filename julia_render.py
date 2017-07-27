@@ -1,55 +1,35 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-0.81, 0.81)
-y_range = (-0.59, 0.59)
-c = complex(-0.84, 0.12)
-max_iter = 370
+x_range = (-1.97, 1.97)
+y_range = (-2.04, 2.04)
+c = complex(-0.66, 0.25)
+max_iter = 300
 
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
-X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
+# Naive implementation with nested loops
+result = np.zeros((height, width))
+for i in range(height):
+    for j in range(width):
+        x = x_range[0] + (x_range[1] - x_range[0]) * j / width
+        y = y_range[0] + (y_range[1] - y_range[0]) * (height - 1 - i) / height
+        z = complex(x, y)
+        
+        for k in range(max_iter):
+            z = z * z + c
+            if abs(z) > 2:
+                result[i, j] = k
+                break
+        else:
+            result[i, j] = max_iter
 
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
-for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
-    mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
-    mask = mask_new
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(result, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Naive)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
-
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
-
-img = ImageOps.solarize(img, threshold=80)
-
-# Circular pixel sort
-def circular_pixel_sort(im):
-    arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
-    return Image.fromarray(arr)
-
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
