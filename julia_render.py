@@ -1,59 +1,45 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageOps
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 width, height = 1600, 1600
-x_range = (-2.01, 2.01)
-y_range = (-2.01, 2.01)
-c = complex(-0.71, 0.26)
-max_iter = 300
+# Zoomed in region for detail
+x_range = (-1.51, 1.51)
+y_range = (-1.58, 1.58)
+c = complex(0.44, 0.19)
+max_iter = 1200
 
-# Julia set
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-julia = np.zeros(Z.shape, dtype=int)
+
+iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    julia[mask & ~mask_new] = i
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Mandelbrot mask
-mandel = np.zeros(Z.shape, dtype=int)
-C = X + 1j * Y
-Z2 = np.zeros_like(C)
-mask = np.ones(C.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + C[mask]
-    mask_new = np.abs(Z2) <= 2
-    mandel[mask & ~mask_new] = i
-    mask = mask_new
+# Smooth coloring for better detail
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
 
-# Vibrant color map
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.9 * julia / max_iter + 0.1) % 1
-hsv[..., 1] = 0.8 + 0.2 * (mandel / max_iter)
-hsv[..., 2] = (julia / max_iter) ** 0.5
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+# Use bright, warm prismatic colormap
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='autumn', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = 0.45 + 0.1428i)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
 
-# Hand-drawn scribble effect
-scribble = Image.new('RGBA', img.size, (0,0,0,0))
-draw = ImageDraw.Draw(scribble)
-for _ in range(200):
-    x0, y0 = np.random.randint(0, width), np.random.randint(0, height)
-    x1, y1 = x0 + np.random.randint(-30, 30), y0 + np.random.randint(-30, 30)
-    color = tuple(np.random.randint(100, 255, 3)) + (np.random.randint(40, 100),)
-    draw.line((x0, y0, x1, y1), fill=color, width=np.random.randint(1, 4))
-img = img.convert('RGBA')
-img = Image.alpha_composite(img, scribble)
-img = img.convert('RGB')
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
-img = ImageEnhance.Color(img).enhance(2.2)
-img = ImageEnhance.Contrast(img).enhance(1.3)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
