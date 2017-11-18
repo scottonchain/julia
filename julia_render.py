@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.52, 1.52)
-y_range = (-1.44, 1.44)
-c = complex(-0.84, 0.17)
-max_iter = 370
+x_range = (-1.6, 1.6)
+y_range = (-1.6, 1.6)
+c = complex(0.39, 0.4)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,26 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Green-magenta palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.4 * smooth_norm + 0.7) % 1
-hsv[..., 1] = 0.9 - 0.7 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.4 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-# Kaleidoscope effect
-def kaleidoscope(im):
+# Diamond mask overlay
+def diamond_mask(im):
     arr = np.array(im)
-    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
-    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    for y in range(arr.shape[0]):
+        for x in range(arr.shape[1]):
+            if abs(x - cx) + abs(y - cy) > min(cx, cy):
+                arr[y, x] = arr[y, x] // 2
     return Image.fromarray(arr)
 
-img = kaleidoscope(img)
-img = ImageEnhance.Color(img).enhance(1.8)
+img = diamond_mask(img)
+img = ImageEnhance.Color(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
