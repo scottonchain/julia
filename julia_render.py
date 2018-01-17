@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import ndimage
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.cm as cm
 
 width, height = 1600, 1600
-x_range = (-0.64, 0.64)
-y_range = (-0.7, 0.7)
-c = complex(-0.7, 0.24)
-max_iter = 500
+# Zoomed in region for detail
+x_range = (-1.49, 1.49)
+y_range = (-1.56, 1.56)
+c = complex(0.46, 0.19)
+max_iter = 1200
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -16,38 +16,29 @@ Z = X + 1j * Y
 
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Apply scipy filters for enhancement
-iteration_smooth = ndimage.gaussian_filter(iteration.astype(float), sigma=0.5)
-iteration_enhanced = ndimage.uniform_filter(iteration_smooth, size=2)
-
-# Smooth coloring
+# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration_enhanced + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
-
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-
+# Use bright, warm prismatic colormap
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (SciPy Enhanced)', fontsize=14)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='autumn', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = 0.45 + 0.1428i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
