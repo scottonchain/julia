@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.98, 1.98)
-y_range = (-1.98, 1.98)
-c = complex(-0.65, -0.36)
+x_range = (-0.77, 0.77)
+y_range = (-0.52, 0.52)
+c = complex(0.37, -0.39)
 max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -34,17 +34,16 @@ hsv[..., 2] = smooth_norm ** 0.2
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Heavy pixelation
-def pixelate(im, block=20):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], block):
-        for j in range(0, arr.shape[1], block):
-            arr[i:i+block, j:j+block] = arr[i, j]
-    return Image.fromarray(arr)
+# Duotone palette
+def duotone(im, color1=(30, 30, 120), color2=(220, 220, 60)):
+    arr = np.array(im).astype(np.float32) / 255.0
+    mask = arr[..., 0] > 0.5
+    arr[mask] = np.array(color1) / 255.0
+    arr[~mask] = np.array(color2) / 255.0
+    return Image.fromarray((arr * 255).astype(np.uint8))
 
-img = pixelate(img, block=30)
-img = ImageOps.flip(img)
-img = ImageEnhance.Color(img).enhance(2.0)
+img = duotone(img)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
