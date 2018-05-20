@@ -1,45 +1,70 @@
 import numpy as np
+from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from matplotlib.colors import hsv_to_rgb
 
+# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-2.05, 2.05)
-y_range = (-2.05, 2.05)
-c = complex(-0.39, 0.58)
-max_iter = 700
+x_range = (-1.67, 1.67)
+y_range = (-1.67, 1.67)
+c = complex(-0.41, 0.61)
+max_iter = 350
 
+# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+# Initialize iteration counts and mask
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
+# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
+# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Use bright, warm prismatic colormap
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='inferno', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.4 + 0.6i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+# Build HSV image with a bright color scheme
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
+hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Bright value
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+# Convert to RGB
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Kaleidoscope effect (4-way mirror)
+def kaleidoscope(im):
+    arr = np.array(im)
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    return Image.fromarray(arr)
+
+img = kaleidoscope(img)
+
+# Artistic postprocessing: glow, contrast, and edge enhancement
+blur = img.filter(ImageFilter.GaussianBlur(radius=3))
+glow = Image.blend(img, blur, alpha=0.4)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
+enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
+
+# Save output
+output_path = 'julia_output.jpg'
+enhanced.save(output_path)
+
+# Optionally display
+# plt.figure(figsize=(8, 8))
+# plt.axis('off')
+# plt.imshow(enhanced)
+# plt.show() 
