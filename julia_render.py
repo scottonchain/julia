@@ -1,39 +1,53 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import random
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-2.06, 2.06)
-y_range = (-1.99, 1.99)
-c = complex(-0.68, 0.3)
-max_iter = 300
-
-# Randomize color palette
-random.seed(42)
-colormaps = ['plasma', 'viridis', 'inferno', 'magma', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'rainbow', 'jet', 'hsv', 'twilight', 'brg']
-selected_cmap = random.choice(colormaps)
+x_range = (-1.6, 1.6)
+y_range = (-1.6, 1.6)
+c = complex(0.39, 0.38)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap=selected_cmap)
-ax.set_title(f'Julia Set (Random Palette: {selected_cmap})', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.4 * smooth_norm + 0.4) % 1
+hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.3
+
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
+
+img = img.filter(ImageFilter.EMBOSS)
+
+# Circular swirl mask overlay
+def swirl_mask(im):
+    arr = np.array(im)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
+    mask = (np.sin(r / 20) > 0)
+    arr[mask] = arr[mask] // 2
+    return Image.fromarray(arr)
+
+img = swirl_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.5)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
