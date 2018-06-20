@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.55, 1.55)
-y_range = (-1.6, 1.6)
-c = complex(0.4, 0.32)
-max_iter = 360
+x_range = (-0.78, 0.78)
+y_range = (-0.86, 0.86)
+c = complex(0.37, 0.38)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,28 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Bright gold palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = 0.12 + 0.08 * smooth_norm
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.quantize(colors=12, method=2)
-img = img.convert('RGB')
+img = img.filter(ImageFilter.EMBOSS)
 
-# Circular vignette
-def vignette(im):
-    arr = np.array(im).astype(np.float32)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
-    arr[mask] = arr[mask] * 0.3
-    return Image.fromarray(arr.astype(np.uint8))
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
 
-img = vignette(img)
-img = ImageEnhance.Contrast(img).enhance(1.4)
+img = add_grid(img, step=60)
+img = ImageEnhance.Color(img).enhance(1.7)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
