@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.41, 1.41)
-y_range = (-1.41, 1.41)
-c = complex(-0.84, 0.2)
-max_iter = 400
+x_range = (-1.46, 1.46)
+y_range = (-1.46, 1.46)
+c = complex(-0.71, -0.34)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,16 +27,23 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.3 * smooth_norm + 0.7) % 1
-hsv[..., 1] = 0.95 - 0.3 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.45 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.FIND_EDGES)
-enhanced = ImageEnhance.Contrast(img).enhance(2.5)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.8)
+img = img.filter(ImageFilter.MedianFilter(size=7))
+
+def add_stripes(im, stripe_width=20):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, stripe_width*2):
+        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
+    return im
+
+img = add_stripes(img, stripe_width=30)
+img = ImageEnhance.Brightness(img).enhance(1.2)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
