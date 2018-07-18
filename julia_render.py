@@ -1,45 +1,60 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from PIL import Image, ImageEnhance
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-2.02, 2.02)
-y_range = (-2.02, 2.02)
-c = complex(-0.4, -0.58)
-max_iter = 1100
+x_range = (-1.5, 1.5)
+y_range = (-1.5, 1.5)
+max_iter = 300
 
+# Multibrot (power 3)
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-iteration = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
+C = X + 1j * Y
+Z = np.zeros_like(C)
+multi = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask] = Z[mask] ** 3 + C[mask]
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    multi[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.6 * multi / max_iter + 0.2) % 1
+hsv[..., 1] = 0.5 + 0.5 * (multi / max_iter)
+hsv[..., 2] = (multi / max_iter) ** 0.8
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-# Use bright, warm prismatic colormap
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='summer', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.4 - 0.59i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+# Julia set as mask
+c = complex(-0.82, 0.12)
+Z2 = X + 1j * Y
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+alpha = (julia / max_iter * 255).astype(np.uint8)
+img = img.convert('RGBA')
+img.putalpha(Image.fromarray(alpha))
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+# Channel mixing
+arr = np.array(img)
+arr[..., 0], arr[..., 1], arr[..., 2] = arr[..., 2], arr[..., 0], arr[..., 1]
+img = Image.fromarray(arr, 'RGBA')
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Transparency gradient
+grad = np.linspace(0, 255, height).astype(np.uint8)
+grad = np.tile(grad[:, None], (1, width))
+arr = np.array(img)
+arr[..., 3] = (arr[..., 3].astype(np.float32) * grad / 255).astype(np.uint8)
+img = Image.fromarray(arr, 'RGBA').convert('RGB')
+
+img = ImageEnhance.Color(img).enhance(1.5)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
