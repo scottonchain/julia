@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.92, 1.92)
-y_range = (-2.02, 2.02)
-c = complex(0.24, -0.01)
-max_iter = 400
+x_range = (-1.48, 1.48)
+y_range = (-1.48, 1.48)
+c = complex(-0.37, 0.57)
+max_iter = 1000
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,27 +27,14 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
+hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.97 - 0.15 * np.abs(np.sin(2 * np.pi * smooth_norm))
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-
-img = img.filter(ImageFilter.GaussianBlur(radius=7))
-
-# Spiral mask overlay
-def spiral_mask(im):
-    arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    theta = np.arctan2(Y - cy, X - cx)
-    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
-    arr[mask] = arr[mask] // 2
-    return Image.fromarray(arr)
-
-img = spiral_mask(img)
-img = ImageEnhance.Contrast(img).enhance(1.6)
+img = ImageEnhance.Color(img).enhance(2.0)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
