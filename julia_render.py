@@ -5,10 +5,10 @@ from matplotlib.colors import hsv_to_rgb
 
 # Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-0.79, 0.79)
-y_range = (-0.79, 0.79)
-c = complex(0.36, 0.36)
-max_iter = 320
+x_range = (-1.7, 1.7)
+y_range = (-1.7, 1.7)
+c = complex(-0.36, 0.56)
+max_iter = 350
 
 # Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
@@ -33,36 +33,38 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a unique color scheme
+# Build HSV image with a bright color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.1 * np.cos(4 * np.pi * smooth_norm)  # High saturation
+hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
+hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
 hsv[..., 2] = smooth_norm ** 0.3  # Bright value
 
 # Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Circular ripple postprocessing effect
-def circular_ripple(im, freq=12, amp=8):
+# Kaleidoscope effect (4-way mirror)
+def kaleidoscope(im):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
-    ripple = amp * np.sin(2 * np.pi * r / freq)
-    newY = np.clip((Y + ripple).astype(int), 0, arr.shape[0] - 1)
-    newX = np.clip((X + ripple).astype(int), 0, arr.shape[1] - 1)
-    rippled = arr[newY, newX]
-    return Image.fromarray(rippled)
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    return Image.fromarray(arr)
 
-img = circular_ripple(img, freq=18, amp=10)
+img = kaleidoscope(img)
 
-# Artistic postprocessing: blur, color, and detail
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.7)
-enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
-enhanced = enhanced.filter(ImageFilter.DETAIL)
+# Artistic postprocessing: glow, contrast, and edge enhancement
+blur = img.filter(ImageFilter.GaussianBlur(radius=3))
+glow = Image.blend(img, blur, alpha=0.4)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
+enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
 # Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+enhanced.save(output_path)
+
+# Optionally display
+# plt.figure(figsize=(8, 8))
+# plt.axis('off')
+# plt.imshow(enhanced)
+# plt.show() 
