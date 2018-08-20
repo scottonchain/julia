@@ -1,53 +1,35 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-1.6, 1.6)
-y_range = (-1.6, 1.6)
-c = complex(0.33, 0.35)
-max_iter = 360
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+c = complex(-0.75, 0.3)
+max_iter = 300
 
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
-X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
+# Naive implementation with nested loops
+result = np.zeros((height, width))
+for i in range(height):
+    for j in range(width):
+        x = x_range[0] + (x_range[1] - x_range[0]) * j / width
+        y = y_range[0] + (y_range[1] - y_range[0]) * (height - 1 - i) / height
+        z = complex(x, y)
+        
+        for k in range(max_iter):
+            z = z * z + c
+            if abs(z) > 2:
+                result[i, j] = k
+                break
+        else:
+            result[i, j] = max_iter
 
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
-for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
-    mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
-    mask = mask_new
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(result, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Naive)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.5
-
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
-
-img = img.quantize(colors=12, method=2)
-img = img.convert('RGB')
-
-# Circular vignette
-def vignette(im):
-    arr = np.array(im).astype(np.float32)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
-    arr[mask] = arr[mask] * 0.3
-    return Image.fromarray(arr.astype(np.uint8))
-
-img = vignette(img)
-img = ImageEnhance.Contrast(img).enhance(1.4)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
