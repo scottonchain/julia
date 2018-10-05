@@ -1,70 +1,59 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-1.77, 1.77)
-y_range = (-1.72, 1.72)
-c = complex(-0.41, 0.56)
+x_range = (-1.88, 1.88)
+y_range = (-1.77, 1.77)
+c = complex(-0.73, -0.34)
 max_iter = 350
 
-# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-# Initialize iteration counts and mask
 div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a bright color scheme
+# Pastel palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
-hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
-hsv[..., 2] = smooth_norm ** 0.3  # Bright value
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.4 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
-# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Kaleidoscope effect (4-way mirror)
-def kaleidoscope(im):
+# Heavy pixelation
+def pixelate(im, block=20):
     arr = np.array(im)
-    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
-    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            arr[i:i+block, j:j+block] = arr[i, j]
     return Image.fromarray(arr)
 
-img = kaleidoscope(img)
+img = pixelate(img, block=30)
 
-# Artistic postprocessing: glow, contrast, and edge enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=3))
-glow = Image.blend(img, blur, alpha=0.4)
-enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
-enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
+# Vertical split mirror
+def vertical_split_mirror(im):
+    arr = np.array(im)
+    mid = arr.shape[1] // 2
+    arr[:, mid:] = arr[:, :mid][:, ::-1]
+    return Image.fromarray(arr)
 
-# Save output
+img = vertical_split_mirror(img)
+img = ImageEnhance.Color(img).enhance(1.5)
+
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(8, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
