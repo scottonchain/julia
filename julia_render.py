@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.85, 1.85)
-y_range = (-1.79, 1.79)
-c = complex(0.27, -0.51)
+x_range = (-1.97, 1.97)
+y_range = (-2.05, 2.05)
+c = complex(-0.69, -0.38)
 max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -26,25 +26,25 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright rainbow palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.95 - 0.4 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.4
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-
-def vertical_wave(im, amp=12, freq=0.09):
+# Heavy pixelation
+def pixelate(im, block=20):
     arr = np.array(im)
-    for j in range(arr.shape[1]):
-        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            arr[i:i+block, j:j+block] = arr[i, j]
     return Image.fromarray(arr)
 
-img = vertical_wave(img, amp=18, freq=0.13)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = pixelate(img, block=30)
+img = ImageOps.flip(img)
+img = ImageEnhance.Color(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
