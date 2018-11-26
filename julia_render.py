@@ -3,9 +3,9 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.8, 0.8)
-y_range = (-0.67, 0.67)
-c = complex(-0.76, 0.19)
+x_range = (-1.44, 1.44)
+y_range = (-1.6, 1.6)
+c = complex(-0.81, 0.19)
 max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -26,30 +26,26 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Green-magenta palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.4 * smooth_norm + 0.7) % 1
+hsv[..., 1] = 0.9 - 0.7 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 img = ImageOps.solarize(img, threshold=80)
 
-# Circular pixel sort
-def circular_pixel_sort(im):
+# Kaleidoscope effect
+def kaleidoscope(im):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
     return Image.fromarray(arr)
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = kaleidoscope(img)
+img = ImageEnhance.Color(img).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
