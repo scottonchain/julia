@@ -6,8 +6,8 @@ width, height = 1600, 1600
 # Zoomed in region for detail
 x_range = (-1.5, 1.5)
 y_range = (-1.5, 1.5)
-c = complex(0.49, 0.14)
-max_iter = 1200
+c = complex(0.39, -0.13)
+max_iter = 1000
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -30,8 +30,8 @@ with np.errstate(divide='ignore', invalid='ignore'):
 # Use bright, warm prismatic colormap
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='autumn', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = 0.45 + 0.1428i)', fontsize=14)
+               origin='lower', cmap='spring', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = 0.37 - 0.1i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
