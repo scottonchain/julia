@@ -1,59 +1,68 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
+import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
+# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-2.02, 2.02)
-y_range = (-1.94, 1.94)
-c = complex(-0.71, 0.26)
-max_iter = 300
+x_range = (-0.75, 0.75)
+y_range = (-0.86, 0.86)
+c = complex(0.38, 0.35)
+max_iter = 320
 
-# Julia set
+# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-julia = np.zeros(Z.shape, dtype=int)
+
+# Initialize iteration counts and mask
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
+# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    julia[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Mandelbrot mask
-mandel = np.zeros(Z.shape, dtype=int)
-C = X + 1j * Y
-Z2 = np.zeros_like(C)
-mask = np.ones(C.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + C[mask]
-    mask_new = np.abs(Z2) <= 2
-    mandel[mask & ~mask_new] = i
-    mask = mask_new
+# Smooth coloring
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Vibrant color map
+# Build HSV image with a unique color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.9 * julia / max_iter + 0.1) % 1
-hsv[..., 1] = 0.8 + 0.2 * (mandel / max_iter)
-hsv[..., 2] = (julia / max_iter) ** 0.5
+hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1  # Brighter hue
+hsv[..., 1] = 0.95 - 0.1 * np.cos(4 * np.pi * smooth_norm)  # High saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Bright value
+
+# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Hand-drawn scribble effect
-scribble = Image.new('RGBA', img.size, (0,0,0,0))
-draw = ImageDraw.Draw(scribble)
-for _ in range(200):
-    x0, y0 = np.random.randint(0, width), np.random.randint(0, height)
-    x1, y1 = x0 + np.random.randint(-30, 30), y0 + np.random.randint(-30, 30)
-    color = tuple(np.random.randint(100, 255, 3)) + (np.random.randint(40, 100),)
-    draw.line((x0, y0, x1, y1), fill=color, width=np.random.randint(1, 4))
-img = img.convert('RGBA')
-img = Image.alpha_composite(img, scribble)
-img = img.convert('RGB')
+# Circular ripple postprocessing effect
+def circular_ripple(im, freq=12, amp=8):
+    arr = np.array(im)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
+    ripple = amp * np.sin(2 * np.pi * r / freq)
+    newY = np.clip((Y + ripple).astype(int), 0, arr.shape[0] - 1)
+    newX = np.clip((X + ripple).astype(int), 0, arr.shape[1] - 1)
+    rippled = arr[newY, newX]
+    return Image.fromarray(rippled)
 
-img = ImageEnhance.Color(img).enhance(2.2)
-img = ImageEnhance.Contrast(img).enhance(1.3)
+img = circular_ripple(img, freq=18, amp=10)
 
+# Artistic postprocessing: blur, color, and detail
+blur = img.filter(ImageFilter.GaussianBlur(radius=2))
+enhanced = ImageEnhance.Color(blur).enhance(1.7)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
+enhanced = enhanced.filter(ImageFilter.DETAIL)
+
+# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
