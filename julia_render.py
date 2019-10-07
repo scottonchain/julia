@@ -1,66 +1,70 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance
+import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
+# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-1.94, 1.94)
-y_range = (-1.99, 1.99)
-c = complex(-0.79, 0.19)
-max_iter = 300
+x_range = (-1.65, 1.65)
+y_range = (-1.7, 1.7)
+c = complex(-0.39, 0.58)
+max_iter = 350
 
-# Julia set
+# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-julia = np.zeros(Z.shape, dtype=int)
+
+# Initialize iteration counts and mask
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
+# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    julia[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Bright rainbow palette
+# Smooth coloring
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
+# Build HSV image with a bright color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (julia / max_iter + 0.3) % 1
-hsv[..., 1] = 0.9 + 0.1 * (julia / max_iter)
-hsv[..., 2] = (julia / max_iter) ** 0.5
+hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
+hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Bright value
+
+# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Zoomed Mandelbrot overlay
-mandel = np.zeros(Z.shape, dtype=int)
-C = (X/2) + 1j * (Y/2)
-Z2 = np.zeros_like(C)
-mask = np.ones(C.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + C[mask]
-    mask_new = np.abs(Z2) <= 2
-    mandel[mask & ~mask_new] = i
-    mask = mask_new
-mandel_img = (mandel / max_iter * 255).astype(np.uint8)
-mandel_img = Image.fromarray(np.stack([mandel_img]*3, axis=-1)).convert('RGBA')
-mandel_img.putalpha(80)
-img = img.convert('RGBA')
-img = Image.alpha_composite(img, mandel_img)
-img = img.convert('RGB')
+# Kaleidoscope effect (4-way mirror)
+def kaleidoscope(im):
+    arr = np.array(im)
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    return Image.fromarray(arr)
 
-# Draw random geometric shapes
-draw = ImageDraw.Draw(img)
-for _ in range(30):
-    shape = np.random.choice(['ellipse', 'rectangle', 'line'])
-    xy = [np.random.randint(0, width), np.random.randint(0, height), np.random.randint(0, width), np.random.randint(0, height)]
-    color = tuple(np.random.randint(100, 255, 3))
-    if shape == 'ellipse':
-        draw.ellipse(xy, outline=color, width=2)
-    elif shape == 'rectangle':
-        draw.rectangle(xy, outline=color, width=2)
-    else:
-        draw.line(xy, fill=color, width=2)
+img = kaleidoscope(img)
 
-img = ImageEnhance.Color(img).enhance(2.0)
-img = ImageEnhance.Contrast(img).enhance(1.2)
+# Artistic postprocessing: glow, contrast, and edge enhancement
+blur = img.filter(ImageFilter.GaussianBlur(radius=3))
+glow = Image.blend(img, blur, alpha=0.4)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
+enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
+# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path)
+
+# Optionally display
+# plt.figure(figsize=(8, 8))
+# plt.axis('off')
+# plt.imshow(enhanced)
+# plt.show() 
