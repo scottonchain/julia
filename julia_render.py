@@ -1,51 +1,52 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.3, 1.3)
-y_range = (-1.3, 1.3)
-c = complex(0.32, -0.04)
-max_iter = 350
+x_range = (-1.72, 1.72)
+y_range = (-1.72, 1.72)
+c = complex(0.35, -0.22)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.4 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.9
-hsv[..., 2] = smooth_norm ** 0.7
-rgb = hsv_to_rgb(hsv)
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
-ax.set_title('Julia Set (c = 0.285 + 0.01i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
-sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
+img = ImageOps.posterize(img, 2)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Glass tile effect
+def glass_tile(im, tile=30):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
+    return Image.fromarray(arr)
+
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
