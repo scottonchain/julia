@@ -1,68 +1,45 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.cm as cm
 
-# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-0.79, 0.79)
-y_range = (-0.79, 0.79)
-c = complex(-0.66, -0.43)
-max_iter = 500
+# Zoomed in region for detail
+x_range = (-2.0, 2.0)
+y_range = (-2.06, 2.06)
+c = complex(-0.44, -0.59)
+max_iter = 1100
 
-# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-# Initialize iteration counts and mask
-div_iter = np.zeros(Z.shape, dtype=int)
+iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
+# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a unique color scheme
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.2 * np.abs(np.cos(3 * np.pi * smooth_norm))  # High saturation
-hsv[..., 2] = smooth_norm ** 0.4  # Bright value
+# Use bright, warm prismatic colormap
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='summer', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = -0.4 - 0.59i)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
 
-# Convert to RGB
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
-# Mirrored effect
-def mirror(im):
-    return ImageOps.mirror(im)
-
-img = mirror(img)
-
-# Solarize effect
-img = ImageOps.solarize(img, threshold=128)
-
-# Artistic postprocessing: blur, color, and emboss
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.8)
-enhanced = enhanced.filter(ImageFilter.EMBOSS)
-
-# Save output
-output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(10, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
