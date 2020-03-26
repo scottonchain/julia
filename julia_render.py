@@ -1,53 +1,51 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.6, 1.6)
-y_range = (-1.6, 1.6)
-c = complex(0.39, 0.36)
-max_iter = 360
+x_range = (-2.01, 2.01)
+y_range = (-2.01, 2.01)
+max_iter = 300
 
+# Burning Ship fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-div_iter = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
+C = X + 1j * Y
+Z = np.zeros_like(C)
+ship = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    ship[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.4 * smooth_norm + 0.4) % 1
-hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.3
-
+hsv[..., 0] = (0.2 * ship / max_iter + 0.8) % 1
+hsv[..., 1] = 0.9 - 0.7 * (ship / max_iter)
+hsv[..., 2] = (ship / max_iter) ** 0.7
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
+# Julia set as transparency mask
+c = complex(-0.8, 0.18)
+Z2 = X + 1j * Y
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+alpha = (julia / max_iter * 255).astype(np.uint8)
+img = img.convert('RGBA')
+img.putalpha(Image.fromarray(alpha))
 
-# Circular swirl mask overlay
-def swirl_mask(im):
-    arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
-    mask = (np.sin(r / 20) > 0)
-    arr[mask] = arr[mask] // 2
-    return Image.fromarray(arr)
-
-img = swirl_mask(img)
-img = ImageEnhance.Contrast(img).enhance(1.5)
+# Motion blur effect
+img = img.filter(ImageFilter.GaussianBlur(radius=2)).filter(ImageFilter.BoxBlur(3))
+img = img.convert('RGB')
+img = ImageEnhance.Color(img).enhance(2.1)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
