@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.45, 1.45)
-y_range = (-1.45, 1.45)
-c = complex(-0.66, -0.43)
+x_range = (-1.27, 1.27)
+y_range = (-1.38, 1.38)
+c = complex(-0.38, 0.56)
 max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -27,24 +27,22 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
-hsv[..., 1] = 0.8 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=120)
-
-# Horizontal banding overlay
-def add_bands(im, band_height=30):
+def wave_warp(im, amp=10, freq=0.1):
     arr = np.array(im)
-    for y in range(0, arr.shape[0], band_height*2):
-        arr[y:y+band_height] = arr[y:y+band_height] // 2
+    for i in range(arr.shape[0]):
+        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
     return Image.fromarray(arr)
 
-img = add_bands(img, band_height=40)
-img = ImageEnhance.Color(img).enhance(1.3)
+img = wave_warp(img, amp=15, freq=0.15)
+enhanced = ImageEnhance.Color(img).enhance(2.0)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
