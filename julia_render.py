@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.82, 0.82)
-y_range = (-0.61, 0.61)
-c = complex(-0.8, 0.16)
-max_iter = 370
+x_range = (-1.44, 1.44)
+y_range = (-1.37, 1.37)
+c = complex(-0.73, -0.36)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,29 +27,24 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
+hsv[..., 1] = 0.8 - 0.5 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = ImageOps.solarize(img, threshold=120)
 
-# Circular pixel sort
-def circular_pixel_sort(im):
+# Horizontal banding overlay
+def add_bands(im, band_height=30):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
+    for y in range(0, arr.shape[0], band_height*2):
+        arr[y:y+band_height] = arr[y:y+band_height] // 2
     return Image.fromarray(arr)
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = add_bands(img, band_height=40)
+img = ImageEnhance.Color(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
