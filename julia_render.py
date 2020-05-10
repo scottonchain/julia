@@ -1,58 +1,50 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.64, 0.64)
-y_range = (-0.64, 0.64)
-c = complex(-0.69, 0.3)
-max_iter = 500
+x_range = (-1.38, 1.38)
+y_range = (-1.2, 1.2)
+c = complex(-0.41, 0.61)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
+# Fire palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.05 + 0.1 * smooth_norm) % 1
+hsv[..., 1] = 1.0 - 0.5 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-
-# Create PIL image and apply enhancements
 img = Image.fromarray(rgb)
 
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
+def horizontal_ripple(im, amp=10, freq=0.1):
+    arr = np.array(im)
+    for i in range(arr.shape[0]):
+        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
+    return Image.fromarray(arr)
 
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
+img = horizontal_ripple(img, amp=20, freq=0.18)
+img = ImageEnhance.Contrast(img).enhance(1.5)
 
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+img.save(output_path) 
