@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-0.54, 0.54)
-y_range = (-0.54, 0.54)
-c = complex(0.25, 0.02)
-max_iter = 1400
+x_range = (-1.29, 1.29)
+y_range = (-1.29, 1.29)
+c = complex(0.33, 0.04)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -22,23 +21,30 @@ for i in range(max_iter):
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Use bright, warm prismatic colormap
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.4 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.9
+hsv[..., 2] = smooth_norm ** 0.7
+rgb = hsv_to_rgb(hsv)
+
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='cool', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = 0.285 + 0.013i)', fontsize=14)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
+ax.set_title('Julia Set (c = 0.285 + 0.01i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
+sm.set_array([])
+cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
