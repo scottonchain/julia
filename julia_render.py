@@ -1,58 +1,50 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.77, 0.77)
-y_range = (-0.71, 0.71)
-c = complex(-0.68, 0.28)
-max_iter = 500
+x_range = (-0.76, 0.76)
+y_range = (-0.76, 0.76)
+c = complex(0.41, -0.23)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
 hsv = np.zeros((height, width, 3), dtype=float)
 hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-
-# Create PIL image and apply enhancements
 img = Image.fromarray(rgb)
 
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
+img = img.filter(ImageFilter.FIND_EDGES)
 
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
+# Horizontal flip every 100 pixels
+def flip_blocks(im, block=100):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], block*2):
+        arr[i:i+block] = arr[i:i+block][::-1]
+    return Image.fromarray(arr)
 
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
+img = flip_blocks(img, block=100)
+img = ImageEnhance.Contrast(img).enhance(1.8)
 
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+img.save(output_path) 
