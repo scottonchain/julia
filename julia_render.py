@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.16, 1.16)
-y_range = (-0.77, 0.77)
-c = complex(-0.71, 0.29)
+x_range = (-1.09, 1.09)
+y_range = (-0.83, 0.83)
+c = complex(-0.73, 0.28)
 max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -21,10 +22,20 @@ for i in range(max_iter):
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
+# Bright autumn palette
+from matplotlib import cm
+rgb = cm.autumn(smooth_norm)[..., :3]
+
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='hsv')
-ax.set_title('Julia Set (Bright HSV)', fontsize=14)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower')
+ax.set_title('Julia Set (Bright Autumn)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
