@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.36, 1.36)
-y_range = (-1.36, 1.36)
-c = complex(-0.75, -0.4)
-max_iter = 340
+x_range = (-1.48, 1.48)
+y_range = (-1.48, 1.48)
+c = complex(0.26, 0.06)
+max_iter = 900
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,30 +27,14 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.85 * smooth_norm + 0.15) % 1
-hsv[..., 1] = 1.0 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-
-# Pixel sorting effect
-def pixel_sort(im):
-    arr = np.array(im)
-    for col in arr.transpose(1,0,2):
-        col.sort(axis=0)
-    return Image.fromarray(arr)
-
-img = pixel_sort(img)
-
-def add_stripes(im, stripe_width=20):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, stripe_width*2):
-        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
-    return im
-
-img = add_stripes(img, stripe_width=25)
-img = ImageEnhance.Brightness(img).enhance(1.3)
+img = ImageEnhance.Color(img).enhance(2.0)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
