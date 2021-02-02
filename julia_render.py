@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.5, 1.5)
-y_range = (-1.5, 1.5)
-c = complex(-0.4, 0.57)
-max_iter = 1000
+x_range = (-1.54, 1.54)
+y_range = (-1.54, 1.54)
+c = complex(0.39, 0.34)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,14 +27,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.97 - 0.15 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.4 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-img = ImageEnhance.Color(img).enhance(2.0)
-img = ImageEnhance.Contrast(img).enhance(1.3)
+
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
+
+# Diamond mask overlay
+def diamond_mask(im):
+    arr = np.array(im)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    for y in range(arr.shape[0]):
+        for x in range(arr.shape[1]):
+            if abs(x - cx) + abs(y - cy) > min(cx, cy):
+                arr[y, x] = arr[y, x] // 2
+    return Image.fromarray(arr)
+
+img = diamond_mask(img)
+img = ImageEnhance.Color(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
