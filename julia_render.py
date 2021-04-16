@@ -1,62 +1,52 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import random
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.91, 1.91)
-y_range = (-2.04, 2.04)
-c = complex(-0.75, 0.28)
-max_iter = 300
-
-# Randomize fractal type and iteration formula
-random.seed(42)
-fractal_types = ['julia', 'mandelbrot', 'burning_ship', 'tricorn', 'phoenix']
-selected_type = random.choice(fractal_types)
+x_range = (-1.71, 1.71)
+y_range = (-1.71, 1.71)
+c = complex(0.35, -0.21)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-if selected_type == 'julia':
-    C = c
-elif selected_type == 'mandelbrot':
-    C = Z.copy()
-elif selected_type == 'burning_ship':
-    C = Z.copy()
-elif selected_type == 'tricorn':
-    C = c
-elif selected_type == 'phoenix':
-    C = Z.copy()
-    p = random.uniform(-0.5, 0.5) + 1j * random.uniform(-0.5, 0.5)
-    Zold = np.zeros_like(Z)
-
 for i in range(max_iter):
-    if selected_type == 'julia':
-        Z[mask] = Z[mask] ** 2 + C
-    elif selected_type == 'mandelbrot':
-        Z[mask] = Z[mask] ** 2 + C[mask]
-    elif selected_type == 'burning_ship':
-        Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
-    elif selected_type == 'tricorn':
-        Z[mask] = np.conj(Z[mask]) ** 2 + C
-    elif selected_type == 'phoenix':
-        Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
-    
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='plasma')
-ax.set_title(f'Fractal (Random Type: {selected_type})', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Metallic palette
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
+
+img = ImageOps.posterize(img, 2)
+
+# Glass tile effect
+def glass_tile(im, tile=30):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
+    return Image.fromarray(arr)
+
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
