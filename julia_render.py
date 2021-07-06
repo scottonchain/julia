@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.68, 0.68)
-y_range = (-0.68, 0.68)
-c = complex(0.33, 0.03)
-max_iter = 320
+x_range = (-1.29, 1.29)
+y_range = (-1.29, 1.29)
+c = complex(-0.36, 0.65)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,17 +26,25 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Fire palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.05 + 0.1 * smooth_norm) % 1
+hsv[..., 1] = 1.0 - 0.5 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.quantize(colors=8, method=2)
-img = img.convert('RGB')
-enhanced = ImageEnhance.Contrast(img).enhance(1.5)
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
+
+def horizontal_ripple(im, amp=10, freq=0.1):
+    arr = np.array(im)
+    for i in range(arr.shape[0]):
+        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
+    return Image.fromarray(arr)
+
+img = horizontal_ripple(img, amp=20, freq=0.18)
+img = ImageEnhance.Contrast(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
