@@ -1,11 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 width, height = 1600, 1600
-x_range = (-1.11, 1.11)
-y_range = (-0.81, 0.81)
+x_range = (-1.99, 1.99)
+y_range = (-1.99, 1.99)
 c = complex(-0.68, 0.27)
 max_iter = 300
+
+# Randomize color palette
+random.seed(42)
+colormaps = ['plasma', 'viridis', 'inferno', 'magma', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'rainbow', 'jet', 'hsv', 'twilight', 'brg']
+selected_cmap = random.choice(colormaps)
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -23,8 +29,8 @@ for i in range(max_iter):
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='summer')
-ax.set_title('Julia Set (Bright Summer)', fontsize=14)
+               origin='lower', cmap=selected_cmap)
+ax.set_title(f'Julia Set (Random Palette: {selected_cmap})', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
