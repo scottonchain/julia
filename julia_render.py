@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.14, 1.14)
-y_range = (-0.78, 0.78)
-c = complex(-0.65, 0.28)
+x_range = (-1.02, 1.02)
+y_range = (-0.81, 0.81)
+c = complex(-0.67, 0.28)
 max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -28,14 +28,14 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright autumn palette
+# Bright spring palette
 from matplotlib import cm
-rgb = cm.autumn(smooth_norm)[..., :3]
+rgb = cm.spring(smooth_norm)[..., :3]
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
 im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
                origin='lower')
-ax.set_title('Julia Set (Bright Autumn)', fontsize=14)
+ax.set_title('Julia Set (Bright Spring)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
