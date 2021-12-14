@@ -1,44 +1,59 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.02, 1.02)
-y_range = (-0.81, 0.81)
-c = complex(-0.67, 0.28)
+x_range = (-2.04, 2.04)
+y_range = (-2.04, 2.04)
+c = complex(-0.73, 0.23)
 max_iter = 300
 
+# Julia set
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-
-iteration = np.zeros(Z.shape, dtype=int)
+julia = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    julia[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+# Mandelbrot mask
+mandel = np.zeros(Z.shape, dtype=int)
+C = X + 1j * Y
+Z2 = np.zeros_like(C)
+mask = np.ones(C.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + C[mask]
+    mask_new = np.abs(Z2) <= 2
+    mandel[mask & ~mask_new] = i
+    mask = mask_new
 
-# Bright spring palette
-from matplotlib import cm
-rgb = cm.spring(smooth_norm)[..., :3]
+# Vibrant color map
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.9 * julia / max_iter + 0.1) % 1
+hsv[..., 1] = 0.8 + 0.2 * (mandel / max_iter)
+hsv[..., 2] = (julia / max_iter) ** 0.5
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (Bright Spring)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+# Hand-drawn scribble effect
+scribble = Image.new('RGBA', img.size, (0,0,0,0))
+draw = ImageDraw.Draw(scribble)
+for _ in range(200):
+    x0, y0 = np.random.randint(0, width), np.random.randint(0, height)
+    x1, y1 = x0 + np.random.randint(-30, 30), y0 + np.random.randint(-30, 30)
+    color = tuple(np.random.randint(100, 255, 3)) + (np.random.randint(40, 100),)
+    draw.line((x0, y0, x1, y1), fill=color, width=np.random.randint(1, 4))
+img = img.convert('RGBA')
+img = Image.alpha_composite(img, scribble)
+img = img.convert('RGB')
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+img = ImageEnhance.Color(img).enhance(2.2)
+img = ImageEnhance.Contrast(img).enhance(1.3)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
