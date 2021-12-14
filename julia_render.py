@@ -1,58 +1,42 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.68, 0.68)
-y_range = (-0.63, 0.63)
-c = complex(-0.71, 0.29)
-max_iter = 500
+x_range = (-0.83, 0.83)
+y_range = (-0.89, 0.89)
+c = complex(-0.71, -0.37)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-
-# Create PIL image and apply enhancements
 img = Image.fromarray(rgb)
 
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
+img = ImageOps.solarize(img, threshold=100)
+enhanced = ImageEnhance.Color(img).enhance(2.0)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.4)
 
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
-
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
-
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+enhanced.save(output_path) 
