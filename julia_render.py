@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.64, 0.64)
-y_range = (-0.5, 0.5)
-c = complex(0.39, -0.45)
-max_iter = 350
+x_range = (-1.48, 1.48)
+y_range = (-1.48, 1.48)
+c = complex(-0.8, 0.18)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,24 +26,26 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Green-magenta palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.4 * smooth_norm + 0.7) % 1
+hsv[..., 1] = 0.9 - 0.7 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Duotone palette
-def duotone(im, color1=(30, 30, 120), color2=(220, 220, 60)):
-    arr = np.array(im).astype(np.float32) / 255.0
-    mask = arr[..., 0] > 0.5
-    arr[mask] = np.array(color1) / 255.0
-    arr[~mask] = np.array(color2) / 255.0
-    return Image.fromarray((arr * 255).astype(np.uint8))
+img = ImageOps.solarize(img, threshold=80)
 
-img = duotone(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+# Kaleidoscope effect
+def kaleidoscope(im):
+    arr = np.array(im)
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    return Image.fromarray(arr)
+
+img = kaleidoscope(img)
+img = ImageEnhance.Color(img).enhance(1.8)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
