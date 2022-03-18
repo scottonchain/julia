@@ -5,7 +5,7 @@ from matplotlib.colors import hsv_to_rgb
 width, height = 1600, 1600
 x_range = (-1.46, 1.46)
 y_range = (-1.46, 1.46)
-c = complex(0.33, 0.0)
+c = complex(0.28, 0.03)
 max_iter = 900
 
 x = np.linspace(x_range[0], x_range[1], width)
