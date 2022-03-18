@@ -3,9 +3,9 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-2.01, 2.01)
-y_range = (-2.01, 2.01)
-c = complex(-0.69, 0.27)
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+c = complex(-0.66, 0.29)
 max_iter = 300
 
 # Julia set
