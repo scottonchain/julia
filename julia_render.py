@@ -1,70 +1,65 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-1.62, 1.62)
-y_range = (-1.71, 1.71)
-c = complex(-0.44, 0.58)
-max_iter = 350
+x_range = (-1.52, 1.52)
+y_range = (-1.52, 1.52)
+c = complex(0.25, -0.03)
+max_iter = 400
 
-# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-# Initialize iteration counts and mask
 div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a bright color scheme
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
-hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
-hsv[..., 2] = smooth_norm ** 0.3  # Bright value
+# Sepia palette
+def sepia(im):
+    arr = np.array(im).astype(np.float32)
+    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
+    tr = 0.393 * r + 0.769 * g + 0.189 * b
+    tg = 0.349 * r + 0.686 * g + 0.168 * b
+    tb = 0.272 * r + 0.534 * g + 0.131 * b
+    arr[..., 0] = np.clip(tr, 0, 255)
+    arr[..., 1] = np.clip(tg, 0, 255)
+    arr[..., 2] = np.clip(tb, 0, 255)
+    return Image.fromarray(arr.astype(np.uint8))
 
-# Convert to RGB
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.1 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.4 + 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.7
+
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
+img = sepia(img)
+img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-# Kaleidoscope effect (4-way mirror)
-def kaleidoscope(im):
+# Spiral mask overlay
+def spiral_mask(im):
     arr = np.array(im)
-    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
-    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    theta = np.arctan2(Y - cy, X - cx)
+    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
+    arr[mask] = arr[mask] // 2
     return Image.fromarray(arr)
 
-img = kaleidoscope(img)
+img = spiral_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
-# Artistic postprocessing: glow, contrast, and edge enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=3))
-glow = Image.blend(img, blur, alpha=0.4)
-enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
-enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
-
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(8, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
