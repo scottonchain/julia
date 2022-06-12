@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.19, 1.19)
-y_range = (-0.85, 0.85)
-c = complex(-0.69, 0.32)
+x_range = (-2.04, 2.04)
+y_range = (-2.04, 2.04)
+c = complex(-0.68, 0.22)
 max_iter = 300
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -22,20 +21,10 @@ for i in range(max_iter):
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-# Bright spring palette
-from matplotlib import cm
-rgb = cm.spring(smooth_norm)[..., :3]
-
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (Bright Spring)', fontsize=14)
+im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Vectorized)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
