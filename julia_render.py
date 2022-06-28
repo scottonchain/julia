@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.56, 1.56)
-y_range = (-1.64, 1.64)
-c = complex(0.33, 0.34)
+x_range = (-1.31, 1.31)
+y_range = (-1.31, 1.31)
+c = complex(-0.35, 0.6)
 max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -27,26 +27,22 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.9 + 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.4
+hsv[..., 0] = (0.8 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(4 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
-
-# Checkerboard mask overlay
-def checkerboard(im, size=40):
+def wave_warp(im, amp=10, freq=0.1):
     arr = np.array(im)
-    for i in range(0, arr.shape[0], size):
-        for j in range(0, arr.shape[1], size):
-            if (i // size + j // size) % 2 == 0:
-                arr[i:i+size, j:j+size] = arr[i:i+size, j:j+size] // 2
+    for i in range(arr.shape[0]):
+        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
     return Image.fromarray(arr)
 
-img = checkerboard(img, size=50)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = wave_warp(img, amp=15, freq=0.15)
+enhanced = ImageEnhance.Color(img).enhance(2.0)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
