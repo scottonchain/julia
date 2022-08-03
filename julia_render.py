@@ -1,45 +1,50 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from PIL import Image, ImageFilter, ImageEnhance
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-0.79, 0.79)
-y_range = (-0.62, 0.62)
-c = complex(-0.82, 0.19)
-max_iter = 1300
+x_range = (-1.77, 1.77)
+y_range = (-1.77, 1.77)
+c = complex(0.24, -0.49)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Use bright, warm prismatic colormap
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='winter', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.8 + 0.156i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+# Bright rainbow palette
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.95 - 0.4 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.4
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+
+def vertical_wave(im, amp=12, freq=0.09):
+    arr = np.array(im)
+    for j in range(arr.shape[1]):
+        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
+    return Image.fromarray(arr)
+
+img = vertical_wave(img, amp=18, freq=0.13)
+img = ImageEnhance.Color(img).enhance(1.7)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
