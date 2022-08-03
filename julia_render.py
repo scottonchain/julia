@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.77, 1.77)
-y_range = (-1.77, 1.77)
-c = complex(0.24, -0.49)
-max_iter = 350
+x_range = (-0.79, 0.79)
+y_range = (-0.62, 0.62)
+c = complex(-0.75, 0.13)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,25 +26,30 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright rainbow palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.95 - 0.4 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.4
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+img = ImageOps.solarize(img, threshold=80)
 
-def vertical_wave(im, amp=12, freq=0.09):
+# Circular pixel sort
+def circular_pixel_sort(im):
     arr = np.array(im)
-    for j in range(arr.shape[1]):
-        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    for r in range(1, min(cy, cx)):
+        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
+        for c in range(3):
+            band = arr[..., c][indices]
+            band.sort()
+            arr[..., c][indices] = band
     return Image.fromarray(arr)
 
-img = vertical_wave(img, amp=18, freq=0.13)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = circular_pixel_sort(img)
+img = img.filter(ImageFilter.EDGE_ENHANCE)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
