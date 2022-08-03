@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.84, 0.84)
-y_range = (-0.67, 0.67)
-c = complex(-0.83, 0.18)
-max_iter = 370
+x_range = (-2.06, 2.06)
+y_range = (-2.06, 2.06)
+c = complex(-0.75, -0.37)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -34,22 +34,17 @@ hsv[..., 2] = smooth_norm ** 0.2
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
-
-# Circular pixel sort
-def circular_pixel_sort(im):
+# Heavy pixelation
+def pixelate(im, block=20):
     arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            arr[i:i+block, j:j+block] = arr[i, j]
     return Image.fromarray(arr)
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = pixelate(img, block=30)
+img = ImageOps.flip(img)
+img = ImageEnhance.Color(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
