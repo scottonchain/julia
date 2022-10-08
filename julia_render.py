@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.18, 1.18)
-y_range = (-1.27, 1.27)
-c = complex(-0.56, 0.59)
-max_iter = 300
+x_range = (-0.82, 0.82)
+y_range = (-0.82, 0.82)
+c = complex(-0.72, -0.42)
+max_iter = 370
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,23 +27,16 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 1.0 - 0.6 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.8
+hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Pixel sorting effect
-def pixel_sort(im):
-    arr = np.array(im)
-    for row in arr:
-        row.sort(axis=0)
-    return Image.fromarray(arr)
-
-img = pixel_sort(img)
-enhanced = ImageEnhance.Color(img).enhance(2.5)
-enhanced = ImageEnhance.Brightness(enhanced).enhance(1.3)
+img = ImageOps.solarize(img, threshold=100)
+enhanced = ImageEnhance.Color(img).enhance(2.0)
+enhanced = ImageEnhance.Contrast(enhanced).enhance(1.4)
 
 output_path = 'julia_output.jpg'
 enhanced.save(output_path) 
