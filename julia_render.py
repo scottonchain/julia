@@ -1,34 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-2.04, 2.04)
-y_range = (-2.04, 2.04)
-c = complex(-0.68, 0.31)
-max_iter = 300
+x_range = (-1.63, 1.63)
+y_range = (-1.56, 1.56)
+c = complex(-0.38, 0.61)
+max_iter = 375
 
-# Naive implementation with nested loops
-result = np.zeros((height, width))
-for i in range(height):
-    for j in range(width):
-        x = x_range[0] + (x_range[1] - x_range[0]) * j / width
-        y = y_range[0] + (y_range[1] - y_range[0]) * (height - 1 - i) / height
-        z = complex(x, y)
-        
-        for k in range(max_iter):
-            z = z * z + c
-            if abs(z) > 2:
-                result[i, j] = k
-                break
-        else:
-            result[i, j] = max_iter
+x = np.linspace(x_range[0], x_range[1], width)
+y = np.linspace(y_range[0], y_range[1], height)
+X, Y = np.meshgrid(x, y)
+Z = X + 1j * Y
+
+iteration = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
+for i in range(max_iter):
+    Z[mask] = Z[mask] ** 2 + c
+    mask_new = np.abs(Z) <= 2
+    iteration[mask & ~mask_new] = i
+    mask = mask_new
+
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.7 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.85
+hsv[..., 2] = smooth_norm ** 0.9
+rgb = hsv_to_rgb(hsv)
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(result, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='plasma')
-ax.set_title('Julia Set (Naive)', fontsize=14)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
+ax.set_title('Julia Set (c = -0.4 + 0.6i)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
+sm.set_array([])
+cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
