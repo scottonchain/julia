@@ -3,9 +3,9 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.86, 0.86)
-y_range = (-0.86, 0.86)
-c = complex(0.3, -0.04)
+x_range = (-2.03, 2.03)
+y_range = (-1.92, 1.92)
+c = complex(-0.75, -0.34)
 max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -27,16 +27,24 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 3)
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-enhanced = ImageEnhance.Contrast(img).enhance(2.0)
+# Heavy pixelation
+def pixelate(im, block=20):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], block):
+        for j in range(0, arr.shape[1], block):
+            arr[i:i+block, j:j+block] = arr[i, j]
+    return Image.fromarray(arr)
+
+img = pixelate(img, block=30)
+img = ImageOps.flip(img)
+img = ImageEnhance.Color(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
-enhanced.save(output_path) 
+img.save(output_path) 
