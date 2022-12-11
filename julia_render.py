@@ -1,60 +1,48 @@
 import numpy as np
-from PIL import Image, ImageEnhance
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-1.53, 1.53)
-y_range = (-1.53, 1.53)
+x_range = (-2.02, 2.02)
+y_range = (-2.08, 2.08)
+c = complex(-0.65, 0.25)
 max_iter = 300
 
-# Multibrot (power 3)
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0], x_range[1], width, dtype=np.float32)
+y = np.linspace(y_range[0], y_range[1], height, dtype=np.float32)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-multi = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+iteration = np.full(Z.shape, max_iter, dtype=np.uint16)
+mask = np.ones(Z.shape, dtype=bool)
+escape_radius = 4.0
+escape_radius_sq = escape_radius * escape_radius
+
+Z_sq = np.zeros_like(Z, dtype=np.complex64)
+Z_abs_sq = np.zeros(Z.shape, dtype=np.float32)
+
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 3 + C[mask]
-    mask_new = np.abs(Z) <= 2
-    multi[mask & ~mask_new] = i
+    if not np.any(mask):
+        break
+    
+    Z_sq[mask] = Z[mask] * Z[mask]
+    Z[mask] = Z_sq[mask] + c
+    
+    Z_abs_sq[mask] = Z[mask].real * Z[mask].real + Z[mask].imag * Z[mask].imag
+    mask_new = Z_abs_sq <= escape_radius_sq
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.6 * multi / max_iter + 0.2) % 1
-hsv[..., 1] = 0.5 + 0.5 * (multi / max_iter)
-hsv[..., 2] = (multi / max_iter) ** 0.8
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.sqrt(Z_abs_sq)))
+    smooth = np.nan_to_num(smooth)
 
-# Julia set as mask
-c = complex(-0.83, 0.2)
-Z2 = X + 1j * Y
-julia = np.zeros(Z2.shape, dtype=int)
-mask = np.ones(Z2.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + c
-    mask_new = np.abs(Z2) <= 2
-    julia[mask & ~mask_new] = i
-    mask = mask_new
-alpha = (julia / max_iter * 255).astype(np.uint8)
-img = img.convert('RGBA')
-img.putalpha(Image.fromarray(alpha))
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Highly Optimized)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-# Channel mixing
-arr = np.array(img)
-arr[..., 0], arr[..., 1], arr[..., 2] = arr[..., 2], arr[..., 0], arr[..., 1]
-img = Image.fromarray(arr, 'RGBA')
-
-# Transparency gradient
-grad = np.linspace(0, 255, height).astype(np.uint8)
-grad = np.tile(grad[:, None], (1, width))
-arr = np.array(img)
-arr[..., 3] = (arr[..., 3].astype(np.float32) * grad / 255).astype(np.uint8)
-img = Image.fromarray(arr, 'RGBA').convert('RGB')
-
-img = ImageEnhance.Color(img).enhance(1.5)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
