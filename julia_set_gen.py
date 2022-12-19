@@ -1,19 +1,17 @@
-globals()
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-1.5 + 0.2j, -0.8 + 0.156j)  # Tweak this for different shapes
+x_range = (-1.5 + 0.2j, -0.8 + 0.156j)   # Tweak this for different shapes
 y_range = (-1.5, 1.5)
-c = complex(-0.7, 0.15)  # Center of the Julia set
+c = complex(-0.7, 0.15)   # Center of the Julia set
 max_iter = 300
 
 # Generate grid of complex points
-x = np.linspace(x_range[0].real, x_range[1].real, width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0].real, x_range[1].real, height)
+y = np.linspace(y_range[0], y_range[1], width)
 X, Y = np.meshgrid(x + 1j * (y - y_range[0]), y)
 Z = X + 1j * Y
 
@@ -36,9 +34,9 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.6) % 1  # Hue
-hsv[..., 1] = 0.8 + 0.2 * smooth_norm  # Saturation
-hsv[..., 2] = smooth_norm ** 0.3  # Value
+hsv[..., 0] = (smooth_norm + 0.6) % 1   # Hue
+hsv[..., 1] = 0.8 + 0.2 * smooth_norm   # Saturation
+hsv[..., 2] = smooth_norm ** 0.3   # Value
 
 # Convert to RGB and adjust color scheme
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
