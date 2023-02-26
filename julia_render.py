@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.79, 0.79)
-y_range = (-0.64, 0.64)
-c = complex(-0.76, 0.19)
-max_iter = 370
+x_range = (-1.59, 1.59)
+y_range = (-1.59, 1.59)
+c = complex(0.36, 0.33)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,29 +27,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=80)
+img = img.quantize(colors=12, method=2)
+img = img.convert('RGB')
 
-# Circular pixel sort
-def circular_pixel_sort(im):
-    arr = np.array(im)
+# Circular vignette
+def vignette(im):
+    arr = np.array(im).astype(np.float32)
     cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    for r in range(1, min(cy, cx)):
-        indices = (np.abs(np.sqrt((np.arange(arr.shape[0])[:, None] - cy) ** 2 + (np.arange(arr.shape[1]) - cx) ** 2) - r) < 1)
-        for c in range(3):
-            band = arr[..., c][indices]
-            band.sort()
-            arr[..., c][indices] = band
-    return Image.fromarray(arr)
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
+    arr[mask] = arr[mask] * 0.3
+    return Image.fromarray(arr.astype(np.uint8))
 
-img = circular_pixel_sort(img)
-img = img.filter(ImageFilter.EDGE_ENHANCE)
+img = vignette(img)
+img = ImageEnhance.Contrast(img).enhance(1.4)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
