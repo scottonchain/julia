@@ -1,51 +1,63 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.65, 1.65)
-y_range = (-1.75, 1.75)
-c = complex(0.34, -0.11)
-max_iter = 380
+x_range = (-2.06, 2.06)
+y_range = (-2.0, 2.0)
+max_iter = 300
 
+# Tricorn fractal
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
-Z = X + 1j * Y
-
-iteration = np.zeros(Z.shape, dtype=int)
-mask = np.ones(Z.shape, dtype=bool)
+C = X + 1j * Y
+Z = np.zeros_like(C)
+tricorn = np.zeros(C.shape, dtype=int)
+mask = np.ones(C.shape, dtype=bool)
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    Z[mask] = np.conj(Z[mask]) ** 2 + C[mask]
     mask_new = np.abs(Z) <= 2
-    iteration[mask & ~mask_new] = i
+    tricorn[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.3 * smooth_norm + 0.6) % 1
-hsv[..., 1] = 0.8
-hsv[..., 2] = smooth_norm ** 0.7
-rgb = hsv_to_rgb(hsv)
+hsv[..., 0] = (0.2 * tricorn / max_iter + 0.8) % 1
+hsv[..., 1] = 0.9 + 0.1 * (tricorn / max_iter)
+hsv[..., 2] = (tricorn / max_iter) ** 0.5
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
-ax.set_title('Julia Set (c = 0.37 - 0.1i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+# Julia set overlay
+c = complex(0.29, -0.02)
+Z2 = X + 1j * Y
+julia = np.zeros(Z2.shape, dtype=int)
+mask = np.ones(Z2.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + c
+    mask_new = np.abs(Z2) <= 2
+    julia[mask & ~mask_new] = i
+    mask = mask_new
+julia_img = (julia / max_iter * 255).astype(np.uint8)
+julia_img = Image.fromarray(np.stack([julia_img]*3, axis=-1)).convert('RGBA')
+julia_img.putalpha(80)
+img = img.convert('RGBA')
+img = Image.alpha_composite(img, julia_img)
+img = img.convert('RGB')
 
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
-sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
+# Color cycling effect
+arr = np.array(img)
+arr = np.roll(arr, shift=30, axis=2)
+img = Image.fromarray(arr)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Geometric grid overlay
+draw = ImageDraw.Draw(img)
+for x in range(0, width, 60):
+    draw.line((x, 0, x, height), fill=(255,255,255,60), width=1)
+for y in range(0, height, 60):
+    draw.line((0, y, width, y), fill=(255,255,255,60), width=1)
+
+img = ImageEnhance.Color(img).enhance(1.7)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
