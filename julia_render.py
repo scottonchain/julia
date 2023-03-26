@@ -1,11 +1,11 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.38, 1.38)
-y_range = (-1.16, 1.16)
-c = complex(-0.39, 0.58)
+x_range = (-1.57, 1.57)
+y_range = (-1.63, 1.63)
+c = complex(0.32, 0.39)
 max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
@@ -26,25 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Fire palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.05 + 0.1 * smooth_norm) % 1
-hsv[..., 1] = 1.0 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.4 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 img = img.filter(ImageFilter.GaussianBlur(radius=8))
 
-def horizontal_ripple(im, amp=10, freq=0.1):
+# Diamond mask overlay
+def diamond_mask(im):
     arr = np.array(im)
-    for i in range(arr.shape[0]):
-        arr[i] = np.roll(arr[i], int(amp * np.sin(freq * i)))
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    for y in range(arr.shape[0]):
+        for x in range(arr.shape[1]):
+            if abs(x - cx) + abs(y - cy) > min(cx, cy):
+                arr[y, x] = arr[y, x] // 2
     return Image.fromarray(arr)
 
-img = horizontal_ripple(img, amp=20, freq=0.18)
-img = ImageEnhance.Contrast(img).enhance(1.5)
+img = diamond_mask(img)
+img = ImageEnhance.Color(img).enhance(1.5)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
