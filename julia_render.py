@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.42, 1.42)
-y_range = (-1.34, 1.34)
-c = complex(-0.69, -0.36)
-max_iter = 340
+x_range = (-1.36, 1.36)
+y_range = (-1.36, 1.36)
+c = complex(-0.83, 0.2)
+max_iter = 400
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,24 +27,16 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.08 + 0.12 * smooth_norm) % 1
-hsv[..., 1] = 0.8 - 0.5 * smooth_norm
+hsv[..., 0] = (0.3 * smooth_norm + 0.7) % 1
+hsv[..., 1] = 0.95 - 0.3 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.7
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.solarize(img, threshold=120)
-
-# Horizontal banding overlay
-def add_bands(im, band_height=30):
-    arr = np.array(im)
-    for y in range(0, arr.shape[0], band_height*2):
-        arr[y:y+band_height] = arr[y:y+band_height] // 2
-    return Image.fromarray(arr)
-
-img = add_bands(img, band_height=40)
-img = ImageEnhance.Color(img).enhance(1.3)
+img = img.filter(ImageFilter.FIND_EDGES)
+enhanced = ImageEnhance.Contrast(img).enhance(2.5)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.8)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
