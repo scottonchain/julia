@@ -1,61 +1,59 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.67, 0.67)
-y_range = (-1.02, 1.02)
-c = complex(-0.55, 0.5)
-max_iter = 320
+x_range = (-1.98, 1.98)
+y_range = (-2.05, 2.05)
+c = complex(-0.67, 0.29)
+max_iter = 300
 
+# Julia set
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
-
-div_iter = np.zeros(Z.shape, dtype=int)
+julia = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    julia[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+# Mandelbrot mask
+mandel = np.zeros(Z.shape, dtype=int)
+C = X + 1j * Y
+Z2 = np.zeros_like(C)
+mask = np.ones(C.shape, dtype=bool)
+for i in range(max_iter):
+    Z2[mask] = Z2[mask] ** 2 + C[mask]
+    mask_new = np.abs(Z2) <= 2
+    mandel[mask & ~mask_new] = i
+    mask = mask_new
 
+# Vibrant color map
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
-
+hsv[..., 0] = (0.9 * julia / max_iter + 0.1) % 1
+hsv[..., 1] = 0.8 + 0.2 * (mandel / max_iter)
+hsv[..., 2] = (julia / max_iter) ** 0.5
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Sepia tone
-def sepia(im):
-    arr = np.array(im).astype(np.float32)
-    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-    tr = 0.393 * r + 0.769 * g + 0.189 * b
-    tg = 0.349 * r + 0.686 * g + 0.168 * b
-    tb = 0.272 * r + 0.534 * g + 0.131 * b
-    arr[..., 0] = np.clip(tr, 0, 255)
-    arr[..., 1] = np.clip(tg, 0, 255)
-    arr[..., 2] = np.clip(tb, 0, 255)
-    return Image.fromarray(arr.astype(np.uint8))
+# Hand-drawn scribble effect
+scribble = Image.new('RGBA', img.size, (0,0,0,0))
+draw = ImageDraw.Draw(scribble)
+for _ in range(200):
+    x0, y0 = np.random.randint(0, width), np.random.randint(0, height)
+    x1, y1 = x0 + np.random.randint(-30, 30), y0 + np.random.randint(-30, 30)
+    color = tuple(np.random.randint(100, 255, 3)) + (np.random.randint(40, 100),)
+    draw.line((x0, y0, x1, y1), fill=color, width=np.random.randint(1, 4))
+img = img.convert('RGBA')
+img = Image.alpha_composite(img, scribble)
+img = img.convert('RGB')
 
-img = sepia(img)
-img = img.filter(ImageFilter.GaussianBlur(radius=6))
-
-def vertical_wave(im, amp=12, freq=0.09):
-    arr = np.array(im)
-    for j in range(arr.shape[1]):
-        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
-    return Image.fromarray(arr)
-
-img = vertical_wave(img, amp=18, freq=0.13)
+img = ImageEnhance.Color(img).enhance(2.2)
+img = ImageEnhance.Contrast(img).enhance(1.3)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
