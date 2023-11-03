@@ -45,7 +45,7 @@ img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
 blur = img.filter(ImageFilter.GaussianBlur(radius=5))  # changed radius for blur effect
-glow = Image.blend(img, blur, alpha=0.3)  # changed alpha value for glow effect
+glow = Image.blend(img, blur, alpha=0.4)  # changed alpha value for glow effect
 enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
 enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
 
