@@ -4,9 +4,9 @@ import matplotlib.cm as cm
 
 width, height = 1600, 1600
 # Zoomed in region for detail
-x_range = (-1.51, 1.51)
-y_range = (-1.56, 1.56)
-c = complex(0.48, 0.11)
+x_range = (-1.42, 1.42)
+y_range = (-1.48, 1.48)
+c = complex(0.47, 0.09)
 max_iter = 1200
 
 x = np.linspace(x_range[0], x_range[1], width)
