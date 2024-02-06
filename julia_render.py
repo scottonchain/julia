@@ -1,17 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import random
+from PIL import Image, ImageEnhance, ImageFilter
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-2.05, 2.05)
-y_range = (-1.96, 1.96)
-c = complex(-0.72, 0.3)
-max_iter = 300
-
-# Randomize fractal type and iteration formula
-random.seed(42)
-fractal_types = ['julia', 'mandelbrot', 'burning_ship', 'tricorn', 'phoenix']
-selected_type = random.choice(fractal_types)
+x_range = (-0.68, 0.68)
+y_range = (-0.56, 0.56)
+c = complex(-0.68, 0.25)
+max_iter = 500
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -21,42 +16,43 @@ Z = X + 1j * Y
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
 
-if selected_type == 'julia':
-    C = c
-elif selected_type == 'mandelbrot':
-    C = Z.copy()
-elif selected_type == 'burning_ship':
-    C = Z.copy()
-elif selected_type == 'tricorn':
-    C = c
-elif selected_type == 'phoenix':
-    C = Z.copy()
-    p = random.uniform(-0.5, 0.5) + 1j * random.uniform(-0.5, 0.5)
-    Zold = np.zeros_like(Z)
-
 for i in range(max_iter):
-    if selected_type == 'julia':
-        Z[mask] = Z[mask] ** 2 + C
-    elif selected_type == 'mandelbrot':
-        Z[mask] = Z[mask] ** 2 + C[mask]
-    elif selected_type == 'burning_ship':
-        Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
-    elif selected_type == 'tricorn':
-        Z[mask] = np.conj(Z[mask]) ** 2 + C
-    elif selected_type == 'phoenix':
-        Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
-    
+    Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='plasma')
-ax.set_title(f'Fractal (Random Type: {selected_type})', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
+# Smooth coloring
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Bright palette
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
+
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+
+# Create PIL image and apply enhancements
+img = Image.fromarray(rgb)
+
+# Apply PIL filters and enhancements
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+img = img.filter(ImageFilter.SMOOTH_MORE)
+
+# Enhance colors and contrast
+enhancer = ImageEnhance.Color(img)
+img = enhancer.enhance(1.5)
+
+enhancer = ImageEnhance.Contrast(img)
+img = enhancer.enhance(1.3)
+
+enhancer = ImageEnhance.Brightness(img)
+img = enhancer.enhance(1.1)
+
+# Save output
+output_path = 'julia_output.jpg'
+img.save(output_path, quality=95) 
