@@ -1,12 +1,13 @@
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 width, height = 1600, 1600
-x_range = (-0.68, 0.68)
-y_range = (-0.56, 0.56)
-c = complex(-0.68, 0.25)
-max_iter = 500
+# Zoomed in region for detail
+x_range = (-2.04, 2.04)
+y_range = (-1.98, 1.98)
+c = complex(-0.42, 0.63)
+max_iter = 700
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -15,44 +16,30 @@ Z = X + 1j * Y
 
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
+# Smooth coloring for better detail
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+# Use bright, warm prismatic colormap
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='inferno', interpolation='bilinear')
+ax.set_title('Julia Set Detail (c = -0.4 + 0.6i)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
+ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
 
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+# Add colorbar
+cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Iteration Count (Smooth)', fontsize=12)
 
-# Create PIL image and apply enhancements
-img = Image.fromarray(rgb)
-
-# Apply PIL filters and enhancements
-img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
-img = img.filter(ImageFilter.SMOOTH_MORE)
-
-# Enhance colors and contrast
-enhancer = ImageEnhance.Color(img)
-img = enhancer.enhance(1.5)
-
-enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.3)
-
-enhancer = ImageEnhance.Brightness(img)
-img = enhancer.enhance(1.1)
-
-# Save output
-output_path = 'julia_output.jpg'
-img.save(output_path, quality=95) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
