@@ -1,56 +1,62 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
+import random
 
 width, height = 1600, 1600
-x_range = (-1.33, 1.33)
-y_range = (-1.44, 1.44)
-c = complex(-0.74, -0.35)
-max_iter = 340
+x_range = (-2.05, 2.05)
+y_range = (-1.96, 1.96)
+c = complex(-0.72, 0.3)
+max_iter = 300
+
+# Randomize fractal type and iteration formula
+random.seed(42)
+fractal_types = ['julia', 'mandelbrot', 'burning_ship', 'tricorn', 'phoenix']
+selected_type = random.choice(fractal_types)
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-div_iter = np.zeros(Z.shape, dtype=int)
+iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
+if selected_type == 'julia':
+    C = c
+elif selected_type == 'mandelbrot':
+    C = Z.copy()
+elif selected_type == 'burning_ship':
+    C = Z.copy()
+elif selected_type == 'tricorn':
+    C = c
+elif selected_type == 'phoenix':
+    C = Z.copy()
+    p = random.uniform(-0.5, 0.5) + 1j * random.uniform(-0.5, 0.5)
+    Zold = np.zeros_like(Z)
+
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
+    if selected_type == 'julia':
+        Z[mask] = Z[mask] ** 2 + C
+    elif selected_type == 'mandelbrot':
+        Z[mask] = Z[mask] ** 2 + C[mask]
+    elif selected_type == 'burning_ship':
+        Z[mask] = (np.abs(Z[mask].real) + 1j * np.abs(Z[mask].imag)) ** 2 + C[mask]
+    elif selected_type == 'tricorn':
+        Z[mask] = np.conj(Z[mask]) ** 2 + C
+    elif selected_type == 'phoenix':
+        Z[mask], Zold[mask] = Z[mask] ** 2 + C[mask] + p * Zold[mask], Z[mask]
+    
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
-with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
-    smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title(f'Fractal (Random Type: {selected_type})', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.85 * smooth_norm + 0.15) % 1
-hsv[..., 1] = 1.0 - 0.5 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.7
-
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
-
-# Pixel sorting effect
-def pixel_sort(im):
-    arr = np.array(im)
-    for col in arr.transpose(1,0,2):
-        col.sort(axis=0)
-    return Image.fromarray(arr)
-
-img = pixel_sort(img)
-
-def add_stripes(im, stripe_width=20):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, stripe_width*2):
-        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
-    return im
-
-img = add_stripes(img, stripe_width=25)
-img = ImageEnhance.Brightness(img).enhance(1.3)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
