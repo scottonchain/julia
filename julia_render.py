@@ -1,63 +1,48 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance
-from matplotlib.colors import hsv_to_rgb
+import matplotlib.pyplot as plt
 
 width, height = 1600, 1600
-x_range = (-2.04, 2.04)
-y_range = (-1.96, 1.96)
+x_range = (-1.98, 1.98)
+y_range = (-1.98, 1.98)
+c = complex(-0.71, 0.26)
 max_iter = 300
 
-# Tricorn fractal
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0], x_range[1], width, dtype=np.float32)
+y = np.linspace(y_range[0], y_range[1], height, dtype=np.float32)
 X, Y = np.meshgrid(x, y)
-C = X + 1j * Y
-Z = np.zeros_like(C)
-tricorn = np.zeros(C.shape, dtype=int)
-mask = np.ones(C.shape, dtype=bool)
+Z = X + 1j * Y
+
+iteration = np.full(Z.shape, max_iter, dtype=np.uint16)
+mask = np.ones(Z.shape, dtype=bool)
+escape_radius = 4.0
+escape_radius_sq = escape_radius * escape_radius
+
+Z_sq = np.zeros_like(Z, dtype=np.complex64)
+Z_abs_sq = np.zeros(Z.shape, dtype=np.float32)
+
 for i in range(max_iter):
-    Z[mask] = np.conj(Z[mask]) ** 2 + C[mask]
-    mask_new = np.abs(Z) <= 2
-    tricorn[mask & ~mask_new] = i
+    if not np.any(mask):
+        break
+    
+    Z_sq[mask] = Z[mask] * Z[mask]
+    Z[mask] = Z_sq[mask] + c
+    
+    Z_abs_sq[mask] = Z[mask].real * Z[mask].real + Z[mask].imag * Z[mask].imag
+    mask_new = Z_abs_sq <= escape_radius_sq
+    iteration[mask & ~mask_new] = i
     mask = mask_new
 
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.2 * tricorn / max_iter + 0.8) % 1
-hsv[..., 1] = 0.9 + 0.1 * (tricorn / max_iter)
-hsv[..., 2] = (tricorn / max_iter) ** 0.5
-rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-img = Image.fromarray(rgb)
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.sqrt(Z_abs_sq)))
+    smooth = np.nan_to_num(smooth)
 
-# Julia set overlay
-c = complex(0.29, 0.04)
-Z2 = X + 1j * Y
-julia = np.zeros(Z2.shape, dtype=int)
-mask = np.ones(Z2.shape, dtype=bool)
-for i in range(max_iter):
-    Z2[mask] = Z2[mask] ** 2 + c
-    mask_new = np.abs(Z2) <= 2
-    julia[mask & ~mask_new] = i
-    mask = mask_new
-julia_img = (julia / max_iter * 255).astype(np.uint8)
-julia_img = Image.fromarray(np.stack([julia_img]*3, axis=-1)).convert('RGBA')
-julia_img.putalpha(80)
-img = img.convert('RGBA')
-img = Image.alpha_composite(img, julia_img)
-img = img.convert('RGB')
+fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Highly Optimized)', fontsize=14)
+ax.set_xlabel('Re(z)', fontsize=12)
+ax.set_ylabel('Im(z)', fontsize=12)
 
-# Color cycling effect
-arr = np.array(img)
-arr = np.roll(arr, shift=30, axis=2)
-img = Image.fromarray(arr)
-
-# Geometric grid overlay
-draw = ImageDraw.Draw(img)
-for x in range(0, width, 60):
-    draw.line((x, 0, x, height), fill=(255,255,255,60), width=1)
-for y in range(0, height, 60):
-    draw.line((0, y, width, y), fill=(255,255,255,60), width=1)
-
-img = ImageEnhance.Color(img).enhance(1.7)
-
-output_path = 'julia_output.jpg'
-img.save(output_path) 
+plt.tight_layout()
+plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
+plt.close() 
