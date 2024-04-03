@@ -5,15 +5,15 @@ from matplotlib.colors import hsv_to_rgb
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-1.5 + 0.2j, -0.8 + 0.156j)  # Change the center of the julia set
+x_range = (-1.5, 1.5)
 y_range = (-1.5, 1.5)
-c = complex(-0.8, 0.156)  # Tweak this for different shapes
+c = complex(-0.8 + 0j, 0.156)  # Tweak this for different shapes
 max_iter = 300
 
 # Generate grid of complex points
-x = np.linspace(x_range[0].real, x_range[1].real, width)
+x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
-X, Y = np.meshgrid(x + 1j * (y - y_range[0]), y - y_range[0])
+X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
 # Initialize iteration counts and mask
@@ -24,11 +24,11 @@ mask = np.ones(Z.shape, dtype=bool)
 for i in range(max_iter):
     Z[mask] = Z[mask]**2 + c
     mask_new = np.abs(Z) <= 2
-    div_iter[mask & ~mask_new] = i
+    div_iter[~mask & mask_new] = i
     mask = mask_new
 
 # Smooth coloring
-with np.errstate(divide='ignore', invalid='ignore'):
+with np.errstate(divide='warn', invalid='warn'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
@@ -44,10 +44,10 @@ rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=4))  # Change the radius of the blur filter
-glow = Image.blend(img, blur, alpha=0.5)  # Change the alpha value for a more subtle glow effect
-enhanced = ImageEnhance.Contrast(glow).enhance(1.3)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.2)
+blur = img.filter(ImageFilter.GaussianBlur(radius=5))
+glow = Image.blend(img, blur, alpha=0.2)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.4)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
 
 # Display
 plt.figure(figsize=(6, 6))
