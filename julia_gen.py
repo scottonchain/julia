@@ -68,4 +68,5 @@ plt.axis('off')
 plt.imshow(enhanced)
 plt.show()
 with open("log.txt", "a") as f: f.write("done\n")
+import os; print("Current directory:", os.getcwd())
 
