@@ -1,4 +1,3 @@
-__doc__ = __doc__
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
@@ -55,11 +54,4 @@ plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced)
 plt.show()
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
 
