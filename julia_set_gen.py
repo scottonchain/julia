@@ -1,4 +1,4 @@
-__doc__ = __doc__
+__doc__ = "Julia Set Visualization"
 __file__ = __file__ if '__file__' in globals() else None
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
@@ -7,7 +7,7 @@ from matplotlib.colors import hsv_to_rgb
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-1.5, 1.5)
+x_range = (-1.5, 2)  # Changed the center of the julia set
 y_range = (-1.5, 1.5)
 c = complex(-0.8 + 0j, 0.156)  # Tweak this for different shapes
 max_iter = 300
@@ -56,5 +56,6 @@ plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced)
 plt.show()
+
 import os; print("Current directory:", os.getcwd())
 
