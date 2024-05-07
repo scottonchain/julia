@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-1.5 + 0j, -0.8 + 0j)  # Changed the center of the julia set
+x_range = (-0.5 + 1j, -0.2 + 1j)  # Changed the center of the julia set
 y_range = (-1.5, 1.5)
 c = complex(-0.8, 0.156)  # Tweak this for different shapes
 max_iter = 300
