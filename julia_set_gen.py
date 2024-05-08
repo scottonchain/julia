@@ -1,13 +1,14 @@
 __doc__ = "Julia Set Visualization"
+
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-0.5 + 1j, -0.2 + 1j)  # Changed the center of the julia set
-y_range = (-1.5, 1.5)
-c = complex(-0.8, 0.156)  # Tweak this for different shapes
+x_range = (-1.5 - 0j, -0.8 + 0j)  # Changed the center of the julia set
+y_range = (-2, 2)
+c = complex(-0.7, 0.3)  # Tweak this for different shapes
 max_iter = 300
 
 # Generate grid of complex points
@@ -45,7 +46,7 @@ img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
 blur = img.filter(ImageFilter.GaussianBlur(radius=5))
-glow = Image.blend(img, blur, alpha=0.2)
+glow = Image.blend(img, blur, alpha=0.1)  # Reduced the alpha value for a more subtle glow effect
 enhanced = ImageEnhance.Contrast(glow).enhance(1.4)
 enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
 
