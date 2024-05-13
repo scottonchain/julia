@@ -12,7 +12,7 @@ C = complex(-0.7, 0.3)  # Tweak this for different shapes
 MAX_ITER = 300
 
 # Artistic parameters
-ARTISTIC_ALPHA = 0.5  # Adjust glow effect intensity
+ARTISTIC_ALPHA = 0.8  # Adjust glow effect intensity
 
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
