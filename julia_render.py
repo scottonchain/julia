@@ -1,13 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from PIL import Image, ImageEnhance, ImageFilter
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-# Zoomed in region for detail
-x_range = (-1.98, 1.98)
-y_range = (-1.98, 1.98)
-c = complex(-0.39, -0.58)
-max_iter = 1100
+x_range = (-0.69, 0.69)
+y_range = (-0.59, 0.59)
+c = complex(-0.75, 0.29)
+max_iter = 500
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -16,30 +15,44 @@ Z = X + 1j * Y
 
 iteration = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring for better detail
+# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Use bright, warm prismatic colormap
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap='summer', interpolation='bilinear')
-ax.set_title('Julia Set Detail (c = -0.4 - 0.59i)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+# Bright palette
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
-# Add colorbar
-cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Iteration Count (Smooth)', fontsize=12)
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Create PIL image and apply enhancements
+img = Image.fromarray(rgb)
+
+# Apply PIL filters and enhancements
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+img = img.filter(ImageFilter.SMOOTH_MORE)
+
+# Enhance colors and contrast
+enhancer = ImageEnhance.Color(img)
+img = enhancer.enhance(1.5)
+
+enhancer = ImageEnhance.Contrast(img)
+img = enhancer.enhance(1.3)
+
+enhancer = ImageEnhance.Brightness(img)
+img = enhancer.enhance(1.1)
+
+# Save output
+output_path = 'julia_output.jpg'
+img.save(output_path, quality=95) 
