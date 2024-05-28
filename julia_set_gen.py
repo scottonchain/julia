@@ -1,17 +1,17 @@
-__doc__  = "Julia Set Visualization"
+__doc__ = "Julia Set Visualization"
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
 
 # Constants
 WIDTH, HEIGHT = 800, 800
-X_RANGE = (-0.6 + 1j * 0, -0.4 + 1j * 0)
+X_RANGE = (-0.5 + 1j * 0, -0.3 + 1j * 0)  # Change the center of the julia set
 Y_RANGE = (-2.5, 2.5)
-C = complex(0.7, -0.9)   # Tweak this for different shapes
+C = complex(0.7, -0.9)  # Tweak this for different shapes
 MAX_ITER = 300
 
 # Artistic parameters
-ARTISTIC_ALPHA = 1.8   # Adjust glow effect intensity
+ARTISTIC_ALPHA = 1.8  # Adjust glow effect intensity
 
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
@@ -46,9 +46,9 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((HEIGHT, WIDTH, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 1.2) % 1    # Hue
-hsv[..., 1] = 0.8 + 0.4 * smooth_norm    # Saturation
-hsv[..., 2] = smooth_norm ** 0.3    # Value
+hsv[..., 0] = (smooth_norm + 1.2) % 1  # Hue
+hsv[..., 1] = 0.8 + 0.4 * smooth_norm  # Saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Value
 
 # Convert to RGB and apply glow effect
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
@@ -56,7 +56,7 @@ img = Image.fromarray(rgb)
 
 # Artistic postprocessing: blur, glow, and enhancement
 blur = img.filter(ImageFilter.GaussianBlur(radius=7))
-glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)    # Increased the alpha value for a more prominent glow effect
+glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)  # Increased the alpha value for a more prominent glow effect
 enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
 enhanced = ImageEnhance.Color(enhanced).enhance(1.2)
 
