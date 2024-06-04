@@ -67,4 +67,5 @@ plt.imshow(enhanced)
 plt.show()
 
 print("Image generated successfully!")
+import os; print("Current directory:", os.getcwd())
 
