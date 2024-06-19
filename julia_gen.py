@@ -1,6 +1,6 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter
 
 # Define the Julia set parameters
 x_min, x_max = -1.5, 1.5
@@ -22,8 +22,6 @@ X, Y = np.meshgrid(x, y)
 Z = julia_set(X, Y)
 
 # Add an artistic effect: blur and contrast adjustment
-from scipy.ndimage import gaussian_filter
-
 enhanced = gaussian_filter(Z, sigma=2)  # Blur with a small radius (sigma)
 enhanced[enhanced > 0.5] = 1  # Contrast adjustment: set all values above 0.5 to 1
 
