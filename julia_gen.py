@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
@@ -23,7 +24,12 @@ Z = julia_set(X, Y)
 
 # Add an artistic effect: blur and contrast adjustment
 enhanced = gaussian_filter(Z, sigma=2)  # Blur with a small radius (sigma)
-enhanced[enhanced > 0.5] = 1  # Contrast adjustment: set all values above 0.5 to 1
+threshold = 0.5  # Contrast threshold
+
+for i in range(len(enhanced)):
+    for j in range(len(enhanced[0])):
+        if enhanced[i][j] > threshold:
+            enhanced[i][j] = min((enhanced[i][j] - threshold) / (1 - threshold), 1)
 
 # Display the enhanced Julia set
 plt.figure(figsize=(6, 6))
