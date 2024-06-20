@@ -22,18 +22,28 @@ X, Y = np.meshgrid(x, y)
 # Evaluate the Julia set function on each point in the grid
 Z = julia_set(X, Y)
 
-# Add an artistic effect: blur and contrast adjustment
-enhanced = gaussian_filter(Z, sigma=2)  # Blur with a small radius (sigma)
-threshold = 0.5  # Contrast threshold
+# Add artistic effects:
+enhanced = Z.copy()  # Create a copy of the original image
 
+# Blur with Gaussian filter (adjust sigma for different blur levels)
+sigma = 2.0
+enhanced = gaussian_filter(enhanced, sigma=sigma) * 255  # Scale to [0-255]
+
+# Apply contrast adjustment:
+contrast_factor = 1.5  # Adjust this value for desired contrast level
+enhanced[enhanced < (256 / contrast_factor)] *= contrast_factor
+
+# Add a subtle gradient effect:
+gradient_strength = 10  # Adjust this value for different gradient levels
 for i in range(len(enhanced)):
     for j in range(len(enhanced[0])):
-        if enhanced[i][j] > threshold:
-            enhanced[i][j] = min((enhanced[i][j] - threshold) / (1 - threshold), 1)
+        if enhanced[i][j] > threshold:  # Apply the gradient only to areas with high contrast
+            r, g, b = int((1 - (enhanced[i][j] / 255)) * 256), int((1 - (enhanced[i][j] / 255)) * 128), int((1 - (enhanced[i][j] / 255)) * 64)
+            enhanced[i][j] = np.array([r, g, b]) / 255
 
 # Display the enhanced Julia set
 plt.figure(figsize=(6, 6))
 plt.axis('off')
-plt.imshow(enhanced, cmap='gray', vmin=0, vmax=1)
+plt.imshow(enhanced.astype(np.uint8), cmap='gray', vmin=0, vmax=1)  # Convert to uint8 for display
 plt.show()
 
