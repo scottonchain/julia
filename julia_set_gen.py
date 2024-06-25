@@ -63,4 +63,5 @@ enhanced_img  = ImageEnhance.Brightness(glow).enhance(1.5)
 enhanced_img.save('enhanced_image.png')
 
 print("Image saved as 'enhanced_image.png'")
+import os; print("Current directory:", os.getcwd())
 
