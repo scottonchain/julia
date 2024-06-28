@@ -31,7 +31,8 @@ enhanced = gaussian_filter(enhanced, sigma=sigma) * 255  # Scale to [0-255]
 
 # Apply contrast adjustment:
 contrast_factor = 1.5  # Adjust this value for desired contrast level
-enhanced[enhanced < (256 / contrast_factor)] *= contrast_factor
+threshold = np.percentile(enhanced, 95)
+enhanced[enhanced < threshold] *= contrast_factor
 
 # Add a subtle gradient effect:
 gradient_strength = 10  # Adjust this value for different gradient levels
