@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.48, 1.48)
-y_range = (-1.48, 1.48)
-c = complex(0.33, -0.02)
-max_iter = 900
+x_range = (-1.44, 1.44)
+y_range = (-1.52, 1.52)
+c = complex(0.27, 0.02)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,14 +27,26 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = 0.0
+hsv[..., 1] = 0.0
+hsv[..., 2] = smooth_norm ** 0.8
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-img = ImageEnhance.Color(img).enhance(2.0)
-img = ImageEnhance.Contrast(img).enhance(1.3)
+
+img = img.filter(ImageFilter.FIND_EDGES)
+img = ImageEnhance.Contrast(img).enhance(2.5)
+
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
+
+img = add_grid(img, step=60)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
