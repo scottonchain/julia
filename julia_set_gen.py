@@ -64,4 +64,5 @@ enhanced_img.save('enhanced_image.png')
 
 print("Image saved as 'enhanced_image.png'")
 import os; print("Current directory:", os.getcwd())
+import os; print("Current directory:", os.getcwd())
 
