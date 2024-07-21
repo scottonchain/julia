@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.48, 1.48)
-y_range = (-1.53, 1.53)
-c = complex(-0.81, 0.17)
-max_iter = 400
+x_range = (-0.88, 0.88)
+y_range = (-0.93, 0.93)
+c = complex(0.32, -0.02)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,30 +26,17 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Deep blue palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = 0.6 + 0.1 * smooth_norm
-hsv[..., 1] = 0.7 + 0.3 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.8
+hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.GaussianBlur(radius=10))
-
-# Radial gradient overlay
-def radial_gradient(im):
-    arr = np.array(im).astype(np.float32)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    r = np.sqrt((Y - cy) ** 2 + (X - cx) ** 2)
-    mask = r / r.max()
-    for c in range(3):
-        arr[..., c] = arr[..., c] * (1 - 0.5 * mask)
-    return Image.fromarray(arr.astype(np.uint8))
-
-img = radial_gradient(img)
-img = ImageEnhance.Brightness(img).enhance(1.1)
+img = ImageOps.posterize(img, 3)
+img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+enhanced = ImageEnhance.Contrast(img).enhance(2.0)
 
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path) 
