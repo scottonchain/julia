@@ -1,4 +1,3 @@
-pass  # no-op
 __doc__ = "Julia Set Visualization"
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
