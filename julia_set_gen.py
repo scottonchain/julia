@@ -1,17 +1,18 @@
 __doc__ = "Julia Set Visualization"
+
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
 
 # Constants
 WIDTH, HEIGHT = 800, 800
-X_RANGE = (-0.5 + 1j * 0, -0.4 + 1j * 0)  # Change the center of the Julia set
-Y_RANGE = (-1.2, 1.2)
-C = complex(-0.3, 0.2)  # Tweak this for different shapes
+X_RANGE = (-0.5 + 1j * 0.2, -0.4 + 1j * 0)   # Change the center of the Julia set
+Y_RANGE = (-1.3, 1.3)
+C = complex(-0.35, 0.25)   # Tweak this for different shapes
 MAX_ITER = 300
 
 # Artistic parameters
-ARTISTIC_ALPHA = 1.8  # Adjust glow effect intensity
+ARTISTIC_ALPHA = 2.5   # Adjust glow effect intensity
 
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
@@ -22,8 +23,10 @@ def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     return (r, g, b).reshape(-1, 3)
 
 # Generate grid of complex points
-x = np.linspace(X_RANGE[0], X_RANGE[1], WIDTH)
-y = np.linspace(Y_RANGE[0], Y_RANGE[1], HEIGHT)
+x_min, x_max = X_RANGE[0].real, X_RANGE[1].real
+y_min, y_max = Y_RANGE[0], Y_RANGE[1]
+x = np.linspace(x_min, x_max, WIDTH)
+y = np.linspace(y_min, y_max, HEIGHT)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
@@ -46,9 +49,9 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((HEIGHT, WIDTH, 3), dtype=float)
-hsv[..., 0] = smooth_norm / 3  # Hue
-hsv[..., 1] = 0.8 + 0.4 * smooth_norm  # Saturation
-hsv[..., 2] = smooth_norm ** 0.3  # Value
+hsv[..., 0] = smooth_norm / 3   # Hue
+hsv[..., 1] = 0.8 + 0.4 * smooth_norm   # Saturation
+hsv[..., 2] = smooth_norm ** 0.3   # Value
 
 # Convert to RGB and apply glow effect
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
@@ -56,7 +59,7 @@ img = Image.fromarray(rgb)
 
 # Artistic postprocessing: blur, glow, and enhancement
 blur = img.filter(ImageFilter.GaussianBlur(radius=7))
-glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)  # Increased the alpha value for a stronger glow effect
+glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)   # Increased the alpha value for a stronger glow effect
 enhanced_img = ImageEnhance.Brightness(glow).enhance(1.5)
 
 # Save the enhanced image
