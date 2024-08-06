@@ -1,17 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
+from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.96, 1.96)
-y_range = (-1.96, 1.96)
-c = complex(-0.67, 0.29)
+x_range = (-1.12, 1.12)
+y_range = (-0.81, 0.81)
+c = complex(-0.7, 0.29)
 max_iter = 300
-
-# Randomize color palette
-random.seed(42)
-colormaps = ['plasma', 'viridis', 'inferno', 'magma', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'rainbow', 'jet', 'hsv', 'twilight', 'brg']
-selected_cmap = random.choice(colormaps)
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,10 +22,20 @@ for i in range(max_iter):
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+
+# Bright spring palette
+from matplotlib import cm
+rgb = cm.spring(smooth_norm)[..., :3]
+
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(iteration, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower', cmap=selected_cmap)
-ax.set_title(f'Julia Set (Random Palette: {selected_cmap})', fontsize=14)
+im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower')
+ax.set_title('Julia Set (Bright Spring)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
 
