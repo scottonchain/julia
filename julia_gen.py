@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter, filters
@@ -49,7 +50,7 @@ for i in range(len(enhanced)):
         if random.random() < noise_level:  # Randomly add noise to some pixels
             enhanced[i][j] += np.array([random.randint(-10, 10), random.randint(-10, 10), random.randint(-10, 10)]) / 255
 
-# Display the enhanced Julia set
+# Display the enhanced Julia set:
 plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced.astype(np.uint8), cmap='gray', vmin=0, vmax=1)  # Convert to uint8 for display
