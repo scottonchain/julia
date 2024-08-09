@@ -85,4 +85,5 @@ if __name__ == "__main__":
     main()
 
 print("Current directory:", os.getcwd())
+import os; print("Current directory:", os.getcwd())
 
