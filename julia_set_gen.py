@@ -3,6 +3,7 @@ __doc__ = "Julia Set Visualization"
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
+import os
 
 # Constants
 WIDTH, HEIGHT = 800, 800
@@ -14,15 +15,13 @@ MAX_ITER = 300
 # Artistic parameters
 ARTISTIC_ALPHA = 2.5  # Adjust glow effect intensity
 
-
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
     h, s, v = hsv.T
     r = v * (1 - s)
-    g = v * ((h % 1 / 6) + 0.5)
+    g = v * ((h % 6 / 6) + 0.5)
     b = v * min(s, 1)
     return (r, g, b).reshape(-1, 3)
-
 
 def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
                         c: complex, max_iter: int) -> tuple:
@@ -42,7 +41,6 @@ def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
         mask = mask_new
 
     return X, Y, Z, div_iter
-
 
 def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
                          max_iter: int) -> tuple:
@@ -65,7 +63,6 @@ def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
 
     return enhanced_img
 
-
 def main():
     x_min, x_max = X_RANGE[0].real, X_RANGE[1].real
     y_min, y_max = Y_RANGE[0], Y_RANGE[1]
@@ -80,10 +77,8 @@ def main():
     enhanced_img.save('enhanced_image.png')
     print("Image saved as 'enhanced_image.png'")
 
-
 if __name__ == "__main__":
     main()
 
 print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
 
