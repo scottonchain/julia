@@ -74,7 +74,7 @@ def main():
         X, Y, Z, div_iter = generate_julia_set(x_min, x_max, y_min, y_max,
                                                  c, max_iter)
 
-        enhanced_img = visualize_julia_set(X, Y, Z, max_iter)
+        enhanced_img = visualize_julia_set(X, Y, z=c, max_iter=max_iter)
 
         # Save the image
         enhanced_img.save("julia.png")
