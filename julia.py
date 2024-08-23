@@ -1,8 +1,5 @@
 
-import numpy as np
-from pyopencl import clcreate, clprogram
-
-def compute_julia_ opencl(width, height, c, max_iter):
+def compute_julia_opencl(width, height, c, max_iter):
     ctx = cl.create_context()
     queue = ctx.get_command_queue()
 
@@ -33,24 +30,11 @@ def compute_julia_ opencl(width, height, c, max_iter):
     x = np.random.rand(width * height).astype(np.float32)
     y = np.random.rand(height * width).astype(np.float32)
 
-    julia_buf = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY | cl.mem_flags HOST_WRITE,
-                           (width, height) * 1 * np.uint8.dtype.itemsize)
+    julia_buf = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY | cl.mem_flags.HOST_WRITE,
+                            (width, height) * 1 * np.uint8.dtype.itemsize)
 
     prg.julia_set(queue, (width, height), None, x.astype(np.float32),
                   y.astype(np.float32), julia_buf)
 
     return julia_buf
-
-def plot_julia(julia):
-    plt.imshow(np.array(julia).astype(np.uint8))
-    plt.axis('off')
-    plt.show()
-
-if __name__ == '__main__':
-    width, height = 500, 500
-    c = complex(-0.8, 0.156)
-    max_iter = 255
-
-    julia = compute_julia_opencl(width, height, c, max_iter)
-    plot_julia(julia)
 
