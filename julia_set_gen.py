@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
+import os
 
 __doc__ = "Julia Set Visualization"
 
@@ -7,11 +8,10 @@ WIDTH, HEIGHT = 800, 800
 X_RANGE = (-0.5 + 1j * 0.2, -0.4 + 1j * 0)
 Y_RANGE = (-1.3, 1.3)
 
-C = complex(-0.35, 0.25)  # Center of the Julia set
+C = complex(-0.35, 0.25)   # Center of the Julia set
 
 MAX_ITER = 300
 ARTISTIC_ALPHA = 2.5
-
 
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
@@ -20,7 +20,6 @@ def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     g = v * ((h % 6 / 6) + 0.5)
     b = v * min(s, 1)
     return (r, g, b).reshape(-1, 3)
-
 
 def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
                         c: complex, max_iter: int) -> tuple:
@@ -40,7 +39,6 @@ def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
         mask = mask_new
 
     return X, Y, Z, div_iter
-
 
 def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
                          max_iter: int) -> tuple:
@@ -63,7 +61,6 @@ def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
 
     return enhanced_img
 
-
 def main():
     try:
         x_min, x_max = X_RANGE[0].real, X_RANGE[1].real
@@ -76,15 +73,12 @@ def main():
 
         enhanced_img = visualize_julia_set(X, Y, z=c, max_iter=max_iter)
 
-        # Save the image
-        enhanced_img.save("julia.png")
+        print("Image saved as 'julia.png'...")
+        enhanced_img.save('julia.png')
 
     except Exception as e:
         print(f"An error occurred: {e}")
 
-
 if __name__ == "__main__":
     main()
-
-import os; print("Current directory:", os.getcwd())
 
