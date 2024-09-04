@@ -7,7 +7,7 @@ WIDTH, HEIGHT = 800, 800
 X_RANGE = (-0.5 + 1j * 0.2, -0.4 + 1j * 0)
 Y_RANGE = (-1.3, 1.3)
 
-C = complex(-0.35, 0.25)  # Center of the Julia set
+C = complex(-0.35, 0.25)   # Center of the Julia set
 
 MAX_ITER = 300
 ARTISTIC_ALPHA = 2.5
