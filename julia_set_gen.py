@@ -7,10 +7,11 @@ WIDTH, HEIGHT = 800, 800
 X_RANGE = (-0.5 + 1j * 0.2, -0.4 + 1j * 0)
 Y_RANGE = (-1.3, 1.3)
 
-C = complex(-0.35, 0.25)   # Center of the Julia set
+C = complex(-0.35, 0.25)    # Center of the Julia set
 
 MAX_ITER = 300
 ARTISTIC_ALPHA = 2.5
+
 
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
@@ -20,63 +21,70 @@ def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     b = v * min(s, 1)
     return (r, g, b).reshape(-1, 3)
 
+
 def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
                         c: complex, max_iter: int) -> tuple:
     """Generate the Julia set"""
-    x = np.linspace(x_min, x_max, WIDTH)
-    y = np.linspace(y_min, y_max, HEIGHT)
-    X, Y = np.meshgrid(x, y)
-    Z = X + 1j * Y
+    try:
+        x = np.linspace(x_min, x_max, WIDTH)
+        y = np.linspace(y_min, y_max, HEIGHT)
+        X, Y = np.meshgrid(x, y)
+        Z = X + 1j * Y
 
-    div_iter = np.zeros(Z.shape, dtype=int)
-    mask = np.ones(Z.shape, dtype=bool)
+        div_iter = np.zeros(Z.shape, dtype=int)
+        mask = np.ones(Z.shape, dtype=bool)
 
-    for i in range(max_iter):
-        Z[mask] = Z[mask]**2 + c
-        mask_new = np.abs(Z) <= 2
-        div_iter[~mask & mask_new] = i
-        mask = mask_new
+        for i in range(max_iter):
+            Z[mask] = Z[mask]**2 + c
+            mask_new = np.abs(Z) <= 2
+            div_iter[~mask & mask_new] = i
+            mask = mask_new
 
-    return X, Y, Z, div_iter
+        return X, Y, Z, div_iter
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise
+
 
 def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
                          max_iter: int) -> tuple:
     """Visualize the Julia set"""
-    smooth = (div_iter + 1 - np.log(np.log2(np.abs(z)))) / (
-        div_iter.max() - div_iter.min())
-    smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
+    try:
+        smooth = (div_iter + 1 - np.log(np.log2(np.abs(z)))) / (
+            div_iter.max() - div_iter.min())
+        smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-    hsv = np.zeros((HEIGHT, WIDTH, 3), dtype=float)
-    hsv[..., 0] = smooth_norm / 3
-    hsv[..., 1] = 0.8 + 0.4 * smooth_norm
-    hsv[..., 2] = smooth_norm ** 0.3
+        hsv = np.zeros((HEIGHT, WIDTH, 3), dtype=float)
+        hsv[..., 0] = smooth_norm / 3
+        hsv[..., 1] = 0.8 + 0.4 * smooth_norm
+        hsv[..., 2] = smooth_norm ** 0.3
 
-    rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-    img = Image.fromarray(rgb)
+        rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+        img = Image.fromarray(rgb)
 
-    blur = img.filter(ImageFilter.GaussianBlur(radius=7))
-    glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)
-    enhanced_img = ImageEnhance.Brightness(glow).enhance(1.5)
+        blur = img.filter(ImageFilter.GaussianBlur(radius=7))
+        glow = Image.blend(img, blur, alpha=ARTISTIC_ALPHA)
+        enhanced_img = ImageEnhance.Brightness(glow).enhance(1.5)
 
-    return enhanced_img
+        return enhanced_img
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise
+
 
 def main():
     try:
         x_min, x_max = X_RANGE[0].real, X_RANGE[1].real
-        y_min, y_max = Y_RANGE[0], Y_RANGE[1]
-        c = complex(-0.35, 0.25)
-        max_iter = MAX_ITER
+        y_min, y_max = Y_RANGE[0].imag, Y_RANGE[1].imag
 
-        X, Y, Z, div_iter = generate_julia_set(x_min, x_max, y_min, y_max,
-                                                 c, max_iter)
+        enhanced_img = visualize_julia_set(*generate_julia_set(x_min, x_max,
+                                                              y_min, y_max, 0.5 + 0.2j, 100))
 
-        enhanced_img = visualize_julia_set(X, Y, z=c, max_iter=max_iter)
-
-        print("Image saved as 'julia.png'...")
-        enhanced_img.save('julia.png')
-
+        # Save the image
+        enhanced_img.save("mandelbrot.png")
     except Exception as e:
         print(f"An error occurred: {e}")
+
 
 if __name__ == "__main__":
     main()
