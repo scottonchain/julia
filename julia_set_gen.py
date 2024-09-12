@@ -7,7 +7,7 @@ WIDTH, HEIGHT = 800, 800
 X_RANGE = (-0.5 + 1j * 0.2, -0.4 + 1j * 0)
 Y_RANGE = (-1.3, 1.3)
 
-C = complex(-0.35, 0.25)    # Center of the Julia set
+C = complex(-0.35, 0.25)  # Center of the Julia set
 
 MAX_ITER = 300
 ARTISTIC_ALPHA = 2.5
@@ -78,7 +78,7 @@ def main():
         y_min, y_max = Y_RANGE[0].imag, Y_RANGE[1].imag
 
         enhanced_img = visualize_julia_set(*generate_julia_set(x_min, x_max,
-                                                              y_min, y_max, 0.5 + 0.2j, 100))
+                                                              y_min, y_max, C, MAX_ITER))
 
         # Save the image
         enhanced_img.save("mandelbrot.png")
@@ -88,5 +88,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-import os; print("Current directory:", os.getcwd())
 
