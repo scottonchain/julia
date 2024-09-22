@@ -12,7 +12,6 @@ C = complex(-0.35, 0.25)  # Center of the Julia set
 MAX_ITER = 300
 ARTISTIC_ALPHA = 2.5
 
-
 def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     """Convert HSV to RGB"""
     h, s, v = hsv.T
@@ -20,7 +19,6 @@ def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     g = v * ((h % 6 / 6) + 0.5)
     b = v * min(s, 1)
     return (r, g, b).reshape(-1, 3)
-
 
 def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
                         c: complex, max_iter: int) -> tuple:
@@ -44,7 +42,6 @@ def generate_julia_set(x_min: float, x_max: float, y_min: float, y_max: float,
     except Exception as e:
         print(f"An error occurred: {e}")
         raise
-
 
 def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
                          max_iter: int) -> tuple:
@@ -71,7 +68,6 @@ def visualize_julia_set(x: np.ndarray, y: np.ndarray, z: complex,
         print(f"An error occurred: {e}")
         raise
 
-
 def main():
     try:
         x_min, x_max = X_RANGE[0].real, X_RANGE[1].real
@@ -85,9 +81,8 @@ def main():
     except Exception as e:
         print(f"An error occurred: {e}")
 
-
 if __name__ == "__main__":
     main()
-import os; print("Current directory:", os.getcwd())
+
 import os; print("Current directory:", os.getcwd())
 
