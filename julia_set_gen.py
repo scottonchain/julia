@@ -5,9 +5,8 @@ import matplotlib.pyplot as plt
 # Artistic Julia set parameters
 width, height = 800, 800
 x_range = (-1.5 + 0.2j, -0.8 + 0.156j)
-y_range = (-1.5, 1.5)
-c = complex(-0.5, 0.3)  # Center of the Julia set
-max_iter = 300
+y_range = (-1.4, 1.6)  # Adjusted y-range for better visualization
+c = complex(-0.7, 0.3)   # Center of the Julia set adjusted to change its shape
 
 # Generate grid of complex points
 x = np.linspace(x_range[0].real, x_range[1].real, height)
@@ -34,19 +33,18 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 1) % 1   # Hue
-hsv[..., 1] = smooth_norm * 0.8   # Saturation
-hsv[..., 2] = smooth_norm ** 0.5   # Value
+hsv[..., 0] = (smooth_norm + 1) % 1    # Hue
+hsv[..., 1] = smooth_norm * 0.8    # Saturation
+hsv[..., 2] = smooth_norm ** 0.5    # Value
 
 # Convert to RGB and adjust color scheme
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Postprocessing: glow and enhancement
+# Postprocessing: glow, enhancement, and contrast adjustment
 blur = img.filter(ImageFilter.GaussianBlur(radius=4))
 glow = Image.blend(img, blur, alpha=0.2)
-enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.5)  # Adjusted contrast for better visualization
 
 # Display
 plt.figure(figsize=(6, 6))
