@@ -1,3 +1,4 @@
+__doc__ = __doc__
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 
