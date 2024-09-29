@@ -5,15 +5,15 @@ from matplotlib.colors import hsv_to_rgb
 
 # Artistic Julia set parameters
 width, height = 800, 800
-x_range = (-1.5 + 0.8j, -0.2 + 0.156j)  # Change the center of the julia set
+x_range = (-1.5 + 0.2j, -0.8 + 0.156j)  # Change the center of the julia set
 y_range = (-1.5, 1.5)
-c = complex(-0.7, 0.15)  # Tweak this for different shapes
+c = complex(-0.8, 0.156)  # Tweak this for different shapes
 max_iter = 300
 
 # Generate grid of complex points
 x = np.linspace(x_range[0].real, x_range[1].real, width)
 y = np.linspace(y_range[0], y_range[1], height)
-X, Y = np.meshgrid(x, y)
+X, Y = np.meshgrid(x + 1j * (y - y_range[0]), y - y_range[0])
 Z = X + 1j * Y
 
 # Initialize iteration counts and mask
@@ -44,10 +44,10 @@ rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=4))  # Change the radius of blur
-glow = Image.blend(img, blur, alpha=0.2)  # Change the alpha value for glow
-enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
+blur = img.filter(ImageFilter.GaussianBlur(radius=4))  # Change the radius of the blur filter
+glow = Image.blend(img, blur, alpha=0.5)  # Change the alpha value for a more subtle glow effect
+enhanced = ImageEnhance.Contrast(glow).enhance(1.3)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.2)
 
 # Display
 plt.figure(figsize=(6, 6))
