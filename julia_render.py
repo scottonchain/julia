@@ -1,50 +1,47 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.33, 1.33)
-y_range = (-1.28, 1.28)
-c = complex(0.31, 0.05)
-max_iter = 350
+x_range = (-2.02, 2.02)
+y_range = (-2.02, 2.02)
+c = complex(-0.67, 0.29)
+max_iter = 300
 
-x = np.linspace(x_range[0], x_range[1], width)
-y = np.linspace(y_range[0], y_range[1], height)
+x = np.linspace(x_range[0], x_range[1], width, dtype=np.float32)
+y = np.linspace(y_range[0], y_range[1], height, dtype=np.float32)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-iteration = np.zeros(Z.shape, dtype=int)
+iteration = np.full(Z.shape, max_iter, dtype=np.uint16)
 mask = np.ones(Z.shape, dtype=bool)
+escape_radius = 4.0
+escape_radius_sq = escape_radius * escape_radius
+
+Z_sq = np.zeros_like(Z, dtype=np.complex64)
+Z_abs_sq = np.zeros(Z.shape, dtype=np.float32)
+
 for i in range(max_iter):
-    Z[mask] = Z[mask] ** 2 + c
-    mask_new = np.abs(Z) <= 2
+    if not np.any(mask):
+        break
+    
+    Z_sq[mask] = Z[mask] * Z[mask]
+    Z[mask] = Z_sq[mask] + c
+    
+    Z_abs_sq[mask] = Z[mask].real * Z[mask].real + Z[mask].imag * Z[mask].imag
+    mask_new = Z_abs_sq <= escape_radius_sq
     iteration[mask & ~mask_new] = i
     mask = mask_new
 
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = iteration + 1 - np.log(np.log2(np.sqrt(Z_abs_sq)))
     smooth = np.nan_to_num(smooth)
-smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
-
-hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.4 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.9
-hsv[..., 2] = smooth_norm ** 0.7
-rgb = hsv_to_rgb(hsv)
 
 fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), origin='lower')
-ax.set_title('Julia Set (c = 0.285 + 0.01i)', fontsize=14)
+im = ax.imshow(smooth, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
+               origin='lower', cmap='plasma')
+ax.set_title('Julia Set (Highly Optimized)', fontsize=14)
 ax.set_xlabel('Re(z)', fontsize=12)
 ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.2, linestyle='--', linewidth=0.5)
-
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-sm = ScalarMappable(cmap='hsv', norm=Normalize(vmin=smooth_norm.min(), vmax=smooth_norm.max()))
-sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
-cbar.set_label('Normalized Iteration (Smooth)', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
