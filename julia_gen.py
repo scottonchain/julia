@@ -1,7 +1,7 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, filters
+import random
 
 # Define the Julia set parameters
 x_min, x_max = -1.5, 1.5
