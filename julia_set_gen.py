@@ -1,68 +1,57 @@
-__file__     = __file__ if '__file__' in globals() else None
 import numpy as np
-from matplotlib import pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance
+import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
 
 # Artistic Julia set parameters
-image_size   = 800
-x_range      = (-0.7 + 1j * 0.3, -0.6 + 1j * 0.2)  # Change the center of the julia set
-y_range      = (-1.8, 1.8)
-c            = complex(-0.72, 0.35)  # Tweak this for different shapes
-max_iterations   = 300
+width, height = 800, 800
+x_range = (-1.5, 1.5)
+y_range = (-1.5, 1.5)
+c = complex(-0.8 + 0.156j)  # tweak this for different shapes
+max_iter = 300
 
 # Generate grid of complex points
-x        = np.linspace(x_range[0].real, x_range[1].real, image_size)
-y        = np.linspace(y_range[0], y_range[1], image_size)
-X, Y     = np.meshgrid(x, y)
-Z        = X + 1j * Y
+x = np.linspace(x_range[0], x_range[1], width)
+y = np.linspace(y_range[0], y_range[1], height)
+X, Y = np.meshgrid(x, y)
+Z = X + 1j * Y
 
 # Initialize iteration counts and mask
-div_iterations    = np.zeros(Z.shape, dtype=int)
-mask              = np.ones(Z.shape, dtype=bool)
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
 
 # Iterate and record divergence
-for i in range(max_iterations):
-    Z[mask]         = Z[mask]**2 + c
-    mask_new        = np.abs(Z) <= 2
-    div_iterations[~mask & mask_new]    = i
-    mask            = mask_new
+for i in range(max_iter):
+    Z[mask] = Z[mask]**2 + c
+    mask_new = np.abs(Z) <= 2
+    div_iter[~mask & mask_new] = i
+    mask = mask_new
 
 # Smooth coloring
-smooth          = (div_iterations - smooth.min()) / (smooth.max() - smooth.min())
+with np.errstate(divide='ignore', invalid='ignore'):
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
+    smooth = np.nan_to_num(smooth)
+smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
-hsv             = np.zeros((image_size, image_size, 3), dtype=float)
-hsv[:, :, 0]    = (smooth + 0.6) % 1  # Hue
-hsv[:, :, 1]    = 0.8 + 0.2 * smooth  # Saturation
-hsv[:, :, 2]    = smooth ** 0.5  # Value
+hsv = np.zeros((height, width, 3), dtype=float)
+hsv[..., 0] = (smooth_norm + 0.6) % 1  # Hue
+hsv[..., 1] = 0.8 + 0.2 * smooth_norm  # Saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Value
 
-# Convert to RGB and display
-def hsv_to_rgb(hsv):
-    h, s, v      = hsv.T
-    i            = np.floor((h*6)+4) % 6
-    f            = (h*6)-i
-    p, q, r, t, u, v    = [(x/255 for x in [(v*(1-q)),(v*(q),)])]
-    if f == 0:
-        r, g, b      = v, t, u
-    elif f < 1:
-        r, g, b      = v, (u+v*f)/2.0, t
-    elif f < 2:
-        r, g, b      = t, u, t-f/4
-    elif f < 3:
-        r, g, b      = t, (t+u+f/2), v
-    elif f < 4:
-        r, g, b      = v, t-f/8, u
-    else:
-        r, g, b      = v, t, u
+# Convert to RGB
+rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-    return np.array([r,g,b]).T
+# Artistic postprocessing: glow and enhancement
+blur = img.filter(ImageFilter.GaussianBlur(radius=8))
+glow = Image.blend(img, blur, alpha=0.3)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.7)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.4)
 
-rgb          = hsv_to_rgb(hsv) * 255
-img          = rgb.astype(np.uint8)
-fig, ax      = plt.subplots(figsize=(6, 6))
-ax.imshow(img)
+# Display
+plt.figure(figsize=(6, 6))
+plt.axis('off')
+plt.imshow(enhanced)
 plt.show()
-
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
 
