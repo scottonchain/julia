@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.82, 0.82)
-y_range = (-0.76, 0.76)
-c = complex(0.37, 0.35)
-max_iter = 340
+x_range = (-1.65, 1.65)
+y_range = (-1.65, 1.65)
+c = complex(0.37, -0.22)
+max_iter = 380
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,28 +26,27 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright gold palette
+# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = 0.12 + 0.08 * smooth_norm
-hsv[..., 1] = 0.9 - 0.3 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.5
+hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
+hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
+hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.EMBOSS)
+img = ImageOps.posterize(img, 2)
 
-# Grid overlay
-def add_grid(im, step=50):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, step):
-        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
-    for y in range(0, im.height, step):
-        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
-    return im
+# Glass tile effect
+def glass_tile(im, tile=30):
+    arr = np.array(im)
+    for i in range(0, arr.shape[0], tile):
+        for j in range(0, arr.shape[1], tile):
+            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
+    return Image.fromarray(arr)
 
-img = add_grid(img, step=60)
-img = ImageEnhance.Color(img).enhance(1.7)
+img = glass_tile(img, tile=40)
+img = ImageEnhance.Contrast(img).enhance(1.6)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
