@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.94, 1.94)
-y_range = (-1.94, 1.94)
-c = complex(0.28, -0.03)
-max_iter = 400
+x_range = (-1.58, 1.58)
+y_range = (-1.5, 1.5)
+c = complex(0.24, -0.0)
+max_iter = 350
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,27 +27,26 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = 0.0
+hsv[..., 1] = 0.0
+hsv[..., 2] = smooth_norm ** 0.8
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.GaussianBlur(radius=7))
+img = img.filter(ImageFilter.FIND_EDGES)
+img = ImageEnhance.Contrast(img).enhance(2.5)
 
-# Spiral mask overlay
-def spiral_mask(im):
-    arr = np.array(im)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    theta = np.arctan2(Y - cy, X - cx)
-    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
-    arr[mask] = arr[mask] // 2
-    return Image.fromarray(arr)
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
 
-img = spiral_mask(img)
-img = ImageEnhance.Contrast(img).enhance(1.6)
+img = add_grid(img, step=60)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
