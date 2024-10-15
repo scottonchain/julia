@@ -1,68 +1,53 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-import matplotlib.pyplot as plt
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
-# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-0.69, 0.69)
-y_range = (-0.69, 0.69)
-c = complex(-0.73, -0.36)
-max_iter = 500
+x_range = (-0.82, 0.82)
+y_range = (-0.76, 0.76)
+c = complex(0.37, 0.35)
+max_iter = 340
 
-# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
-# Initialize iteration counts and mask
 div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
-
-# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     div_iter[mask & ~mask_new] = i
     mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Build HSV image with a unique color scheme
+# Bright gold palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1  # Brighter hue
-hsv[..., 1] = 0.95 - 0.2 * np.abs(np.cos(3 * np.pi * smooth_norm))  # High saturation
-hsv[..., 2] = smooth_norm ** 0.4  # Bright value
+hsv[..., 0] = 0.12 + 0.08 * smooth_norm
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.5
 
-# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Mirrored effect
-def mirror(im):
-    return ImageOps.mirror(im)
+img = img.filter(ImageFilter.EMBOSS)
 
-img = mirror(img)
+# Grid overlay
+def add_grid(im, step=50):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, step):
+        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
+    for y in range(0, im.height, step):
+        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
+    return im
 
-# Solarize effect
-img = ImageOps.solarize(img, threshold=128)
+img = add_grid(img, step=60)
+img = ImageEnhance.Color(img).enhance(1.7)
 
-# Artistic postprocessing: blur, color, and emboss
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))
-enhanced = ImageEnhance.Color(blur).enhance(1.8)
-enhanced = enhanced.filter(ImageFilter.EMBOSS)
-
-# Save output
 output_path = 'julia_output.jpg'
-enhanced.save(output_path)
-
-# Optionally display
-# plt.figure(figsize=(10, 8))
-# plt.axis('off')
-# plt.imshow(enhanced)
-# plt.show() 
+img.save(output_path) 
