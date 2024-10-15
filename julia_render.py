@@ -3,10 +3,10 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.65, 1.65)
-y_range = (-1.65, 1.65)
-c = complex(0.37, -0.22)
-max_iter = 380
+x_range = (-1.69, 1.69)
+y_range = (-1.61, 1.61)
+c = complex(0.38, 0.34)
+max_iter = 360
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -26,27 +26,28 @@ with np.errstate(divide='ignore', invalid='ignore'):
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Metallic palette
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.1 * smooth_norm + 0.6) % 1
-hsv[..., 1] = 0.2 + 0.8 * np.abs(np.cos(3 * np.pi * smooth_norm))
-hsv[..., 2] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
+hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = ImageOps.posterize(img, 2)
+img = img.quantize(colors=12, method=2)
+img = img.convert('RGB')
 
-# Glass tile effect
-def glass_tile(im, tile=30):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], tile):
-        for j in range(0, arr.shape[1], tile):
-            arr[i:i+tile, j:j+tile] = np.flipud(np.fliplr(arr[i:i+tile, j:j+tile]))
-    return Image.fromarray(arr)
+# Circular vignette
+def vignette(im):
+    arr = np.array(im).astype(np.float32)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
+    arr[mask] = arr[mask] * 0.3
+    return Image.fromarray(arr.astype(np.uint8))
 
-img = glass_tile(img, tile=40)
-img = ImageEnhance.Contrast(img).enhance(1.6)
+img = vignette(img)
+img = ImageEnhance.Contrast(img).enhance(1.4)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
