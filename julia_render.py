@@ -1,52 +1,70 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
+from PIL import Image, ImageFilter, ImageEnhance
+import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
+# Parameters (these will be programmatically changed by the main script)
 width, height = 1600, 1600
-x_range = (-1.58, 1.58)
-y_range = (-1.5, 1.5)
-c = complex(0.24, -0.0)
+x_range = (-1.68, 1.68)
+y_range = (-1.68, 1.68)
+c = complex(-0.43, 0.62)
 max_iter = 350
 
+# Generate grid of complex points
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
 X, Y = np.meshgrid(x, y)
 Z = X + 1j * Y
 
+# Initialize iteration counts and mask
 div_iter = np.zeros(Z.shape, dtype=int)
 mask = np.ones(Z.shape, dtype=bool)
+
+# Iterate and record divergence
 for i in range(max_iter):
     Z[mask] = Z[mask] ** 2 + c
     mask_new = np.abs(Z) <= 2
     div_iter[mask & ~mask_new] = i
     mask = mask_new
 
+# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
     smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
+# Build HSV image with a bright color scheme
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = 0.0
-hsv[..., 1] = 0.0
-hsv[..., 2] = smooth_norm ** 0.8
+hsv[..., 0] = (0.6 * smooth_norm + 0.1) % 1  # Bright hue shift
+hsv[..., 1] = 0.9 + 0.1 * np.sin(2 * np.pi * smooth_norm)  # High saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Bright value
 
+# Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.FIND_EDGES)
-img = ImageEnhance.Contrast(img).enhance(2.5)
+# Kaleidoscope effect (4-way mirror)
+def kaleidoscope(im):
+    arr = np.array(im)
+    arr = np.concatenate([arr, arr[:, ::-1]], axis=1)
+    arr = np.concatenate([arr, arr[::-1, :]], axis=0)
+    return Image.fromarray(arr)
 
-# Grid overlay
-def add_grid(im, step=50):
-    draw = ImageDraw.Draw(im)
-    for x in range(0, im.width, step):
-        draw.line((x, 0, x, im.height), fill=(255,255,255,80), width=1)
-    for y in range(0, im.height, step):
-        draw.line((0, y, im.width, y), fill=(255,255,255,80), width=1)
-    return im
+img = kaleidoscope(img)
 
-img = add_grid(img, step=60)
+# Artistic postprocessing: glow, contrast, and edge enhancement
+blur = img.filter(ImageFilter.GaussianBlur(radius=3))
+glow = Image.blend(img, blur, alpha=0.4)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
+enhanced = enhanced.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
+# Save output
 output_path = 'julia_output.jpg'
-img.save(output_path) 
+enhanced.save(output_path)
+
+# Optionally display
+# plt.figure(figsize=(8, 8))
+# plt.axis('off')
+# plt.imshow(enhanced)
+# plt.show() 
