@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.69, 1.69)
-y_range = (-1.61, 1.61)
-c = complex(0.38, 0.34)
-max_iter = 360
+x_range = (-1.41, 1.41)
+y_range = (-1.41, 1.41)
+c = complex(-0.66, -0.4)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,27 +27,23 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.3) % 1
-hsv[..., 1] = 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.45 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.quantize(colors=12, method=2)
-img = img.convert('RGB')
+img = img.filter(ImageFilter.MedianFilter(size=7))
 
-# Circular vignette
-def vignette(im):
-    arr = np.array(im).astype(np.float32)
-    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
-    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
-    mask = ((Y - cy) ** 2 + (X - cx) ** 2) / (cy * cx) > 0.7
-    arr[mask] = arr[mask] * 0.3
-    return Image.fromarray(arr.astype(np.uint8))
+def add_stripes(im, stripe_width=20):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, stripe_width*2):
+        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
+    return im
 
-img = vignette(img)
-img = ImageEnhance.Contrast(img).enhance(1.4)
+img = add_stripes(img, stripe_width=30)
+img = ImageEnhance.Brightness(img).enhance(1.2)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
