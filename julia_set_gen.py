@@ -7,7 +7,7 @@ from matplotlib.colors import hsv_to_rgb
 width, height = 800, 800
 x_range = (-1.5, 1.5)
 y_range = (-1.5, 1.5)
-c = complex(-0.8 + 0.156j)  # tweak this for different shapes
+c = complex(-0.8 + 0.156j)   # tweak this for different shapes
 max_iter = 300
 
 # Generate grid of complex points
@@ -35,17 +35,17 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.6) % 1  # Hue
-hsv[..., 1] = 0.8 + 0.2 * smooth_norm  # Saturation
-hsv[..., 2] = smooth_norm ** 0.3  # Value
+hsv[..., 0] = (smooth_norm + 0.6) % 1   # Hue
+hsv[..., 1] = 0.8 + 0.2 * smooth_norm   # Saturation
+hsv[..., 2] = smooth_norm ** 0.3   # Value
 
 # Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=4))  # reduced radius for less blur
-glow = Image.blend(img, blur, alpha=0.2)  # adjusted alpha value
+blur = img.filter(ImageFilter.GaussianBlur(radius=4))   # reduced radius for less blur
+glow = Image.blend(img, blur, alpha=0.2)   # adjusted alpha value
 enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
 enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
 
@@ -54,6 +54,4 @@ plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced)
 plt.show()
-
-import os; print("Current directory:", os.getcwd())
 
