@@ -1,59 +1,53 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from numba import jit
+from PIL import Image, ImageFilter, ImageEnhance
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.67, 0.67)
-y_range = (-0.67, 0.67)
-c = complex(-0.67, 0.25)
-max_iter = 500
+x_range = (-2.01, 2.01)
+y_range = (-2.01, 2.01)
+c = complex(0.26, -0.02)
+max_iter = 400
 
-@jit(nopython=True)
-def julia_numba(x_range, y_range, width, height, c, max_iter):
-    x = np.linspace(x_range[0], x_range[1], width)
-    y = np.linspace(y_range[0], y_range[1], height)
-    
-    result = np.zeros((height, width), dtype=np.int32)
-    
-    for i in range(height):
-        for j in range(width):
-            z = complex(x[j], y[i])
-            for k in range(max_iter):
-                z = z * z + c
-                if abs(z) > 2:
-                    result[i, j] = k
-                    break
-            else:
-                result[i, j] = max_iter
-    
-    return result
+x = np.linspace(x_range[0], x_range[1], width)
+y = np.linspace(y_range[0], y_range[1], height)
+X, Y = np.meshgrid(x, y)
+Z = X + 1j * Y
 
-# Generate fractal using Numba
-iteration = julia_numba(x_range, y_range, width, height, c, max_iter)
+div_iter = np.zeros(Z.shape, dtype=int)
+mask = np.ones(Z.shape, dtype=bool)
+for i in range(max_iter):
+    Z[mask] = Z[mask] ** 2 + c
+    mask_new = np.abs(Z) <= 2
+    div_iter[mask & ~mask_new] = i
+    mask = mask_new
 
-# Smooth coloring
 with np.errstate(divide='ignore', invalid='ignore'):
-    smooth = iteration + 1 - np.log(np.log2(np.abs(complex(x_range[0], y_range[0]))))
+    smooth = div_iter + 1 - np.log(np.log2(np.abs(Z)))
     smooth = np.nan_to_num(smooth)
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
-# Bright palette
 hsv = np.zeros((height, width, 3), dtype=float)
 hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 1] = 0.95 - 0.1 * smooth_norm
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
+img = Image.fromarray(rgb)
 
-fig, ax = plt.subplots(figsize=(8, 8), dpi=112)
-im = ax.imshow(rgb, extent=(x_range[0], x_range[1], y_range[0], y_range[1]), 
-               origin='lower')
-ax.set_title('Julia Set (Numba Accelerated)', fontsize=14)
-ax.set_xlabel('Re(z)', fontsize=12)
-ax.set_ylabel('Im(z)', fontsize=12)
-ax.grid(True, color='white', alpha=0.3, linestyle='--', linewidth=0.5)
+img = img.filter(ImageFilter.GaussianBlur(radius=7))
 
-plt.tight_layout()
-plt.savefig('julia_output.jpg', dpi=112, bbox_inches='tight')
-plt.close() 
+# Spiral mask overlay
+def spiral_mask(im):
+    arr = np.array(im)
+    cy, cx = arr.shape[0] // 2, arr.shape[1] // 2
+    Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+    theta = np.arctan2(Y - cy, X - cx)
+    mask = ((theta + np.sqrt((Y-cy)**2 + (X-cx)**2)/40) % (2*np.pi) < np.pi)
+    arr[mask] = arr[mask] // 2
+    return Image.fromarray(arr)
+
+img = spiral_mask(img)
+img = ImageEnhance.Contrast(img).enhance(1.6)
+
+output_path = 'julia_output.jpg'
+img.save(output_path) 
