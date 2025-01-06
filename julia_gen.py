@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter, filters
@@ -54,5 +55,6 @@ plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced.astype(np.uint8), cmap='gray', vmin=0, vmax=1)  # Convert to uint8 for display
 plt.show()
+
 import os; print("Current directory:", os.getcwd())
 
