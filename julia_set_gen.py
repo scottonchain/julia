@@ -39,7 +39,7 @@ def hsv_to_rgb(hsv):
     h, s, v = hsv.T
     i = np.floor((h*6)+4) % 6
     f = (h*6)-i
-    p,q,r,t,u,v = [x/255 for x in [(v*(1-q)),(v*(q),)]]
+    p, q, r, t, u, v = [(x/255 for x in [(v*(1-q)),(v*(q),)])]
     if f == 0:
         r, g, b = v, t, u
     elif f < 1:
@@ -60,6 +60,6 @@ img = rgb.astype(np.uint8)
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.imshow(img)
 plt.show()
-import os; print("Current directory:", os.getcwd())
+
 import os; print("Current directory:", os.getcwd())
 
