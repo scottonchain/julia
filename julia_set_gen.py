@@ -35,6 +35,26 @@ hsv[..., 1] = 0.8 + 0.2 * smooth  # Saturation
 hsv[..., 2] = smooth ** 0.5  # Value
 
 # Convert to RGB and display
+def hsv_to_rgb(hsv):
+    h, s, v = hsv.T
+    i = np.floor((h*6)+4) % 6
+    f = (h*6)-i
+    p,q,r,t,u,v = [x/255 for x in [(v*(1-q)),(v*(q),)]]
+    if f == 0:
+        r, g, b = v, t, u
+    elif f < 1:
+        r, g, b = v, (u+v*f)/2.0, t
+    elif f < 2:
+        r, g, b = (v+t+f/2), u, t-f/4
+    elif f < 3:
+        r, g, b = t, (t+u+f/2)/2.0, v
+    elif f < 4:
+        r, g, b = t, (v+v*(1-u)-f/4), u
+    else:
+        r, g, b = v, t-f/8, u
+
+    return np.array([r,g,b]).T
+
 rgb = hsv_to_rgb(hsv) * 255
 img = rgb.astype(np.uint8)
 fig, ax = plt.subplots(figsize=(6, 6))
