@@ -61,4 +61,5 @@ fig, ax = plt.subplots(figsize=(6, 6))
 ax.imshow(img)
 plt.show()
 import os; print("Current directory:", os.getcwd())
+import os; print("Current directory:", os.getcwd())
 
