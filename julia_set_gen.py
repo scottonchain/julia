@@ -3,9 +3,9 @@ from matplotlib import pyplot as plt
 
 # Artistic Julia set parameters
 image_size = 800
-x_range = (-0.75 + 1j * 0.25, -0.5 + 1j * 0.2)  # Change the center of the julia set
+x_range = (-0.7 + 1j * 0.3, -0.5 + 1j * 0.2)  # Change the center of the julia set
 y_range = (-1.8, 1.8)
-c = complex(-0.7, 0.3)  # Tweak this for different shapes
+c = complex(-0.72, 0.35)  # Tweak this for different shapes
 max_iterations = 300
 
 # Generate grid of complex points
@@ -60,7 +60,4 @@ img = rgb.astype(np.uint8)
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.imshow(img)
 plt.show()
-
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
 
