@@ -30,9 +30,9 @@ smooth = (div_iterations - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((image_size, image_size, 3), dtype=float)
-hsv[..., 0] = (smooth + 0.6) % 1  # Hue
-hsv[..., 1] = 0.8 + 0.2 * smooth  # Saturation
-hsv[..., 2] = smooth ** 0.5  # Value
+hsv[:, :, 0] = (smooth + 0.6) % 1  # Hue
+hsv[:, :, 1] = 0.8 + 0.2 * smooth  # Saturation
+hsv[:, :, 2] = smooth ** 0.5  # Value
 
 # Convert to RGB and display
 def hsv_to_rgb(hsv):
@@ -45,13 +45,13 @@ def hsv_to_rgb(hsv):
     elif f < 1:
         r, g, b = v, (u+v*f)/2.0, t
     elif f < 2:
-        r, g, b = (v+t+f/2), u, t-f/4
+        r, g, b = t, u, t-f/4
     elif f < 3:
-        r, g, b = t, (t+u+f/2)/2.0, v
+        r, g, b = t, (t+u+f/2), v
     elif f < 4:
-        r, g, b = t, (v+v*(1-u)-f/4), u
-    else:
         r, g, b = v, t-f/8, u
+    else:
+        r, g, b = v, t, u
 
     return np.array([r,g,b]).T
 
