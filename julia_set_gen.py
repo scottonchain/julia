@@ -30,10 +30,10 @@ def hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
 
 def render_julia_set(width: int, height: int) -> Image:
     """Render the Julia set"""
-    x_range = (-1.5 + 0.2j, -0.8 + 0.156j)
+    x_range = (-1.5 + 0.3j, -0.8 + 0.156j)
     y_range = (-1.4, 1.6)
 
-    c = complex(-0.7, 0.3)
+    c = complex(-0.7, 0.2)
 
     x = np.linspace(x_range[0].real, x_range[1].real, height)
     y = np.linspace(y_range[0], y_range[1], width)
@@ -85,5 +85,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-import os; print("Current directory:", os.getcwd())
 
