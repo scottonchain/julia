@@ -1,14 +1,14 @@
+
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
-import random
 
 # Artistic Julia set parameters
 width, height = 800, 800
 x_range = (-1.5, 1.5)
 y_range = (-1.5, 1.5)
-c = complex(-0.8, 0.156)          # tweak this for different shapes
+c = complex(-0.8, 0.156)  # tweak this for different shapes
 max_iter = 300
 
 # Generate grid of complex points
@@ -36,9 +36,9 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.6) % 1             # Hue
-hsv[..., 1] = 0.8 + 0.2 * smooth_norm             # Saturation
-hsv[..., 2] = smooth_norm ** 0.3                  # Value
+hsv[..., 0] = (smooth_norm + 0.6) % 1  # Hue
+hsv[..., 1] = 0.8 + 0.2 * smooth_norm  # Saturation
+hsv[..., 2] = smooth_norm ** 0.3  # Value
 
 # Convert to RGB and add glow effect
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
@@ -56,9 +56,33 @@ noise = img.point(lambda x: 0 if random.random() < 0.2 else x, '1')
 glow_texture_noise = Image.blend(glow, texture, alpha=0.3)
 glow_texture_noise = Image.blend(glow_texture_noise, noise, alpha=0.4)
 
+# Gradient effect
+gradient_img = enhanced.convert('RGB').split()
+for i in range(3):
+    gradient_img[i] = np.array([[int(x * 255) for x in [(x_range[1] - x_range[0]) / (height - 1) * y + x_range[0] for y in range(height)]])
+gradient_img = Image.merge('RGB', gradient_img)
+
+# Edge detection
+edge_detected = enhanced.filter(ImageFilter.Sobel())
+
+# Color cycling
+color_cycled = []
+for i in range(10):
+    color_cycle = enhanced.convert('HSV').split()
+    color_cycle[0] += 1 / (i + 1)
+    color_cycle[2] *= (i + 1) ** 0.5
+    color_cycle = Image.merge('HSV', color_cycle).convert('RGB')
+    color_cycled.append(color_cycle)
+
 # Display
 plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(glow_texture_noise)
 plt.show()
+
+for img in [glow_texture_noise] + gradient_img + edge_detected + color_cycled:
+    plt.figure(figsize=(6, 6))
+    plt.axis('off')
+    plt.imshow(img)
+    plt.show()
 
