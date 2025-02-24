@@ -85,4 +85,5 @@ for img in [glow_texture_noise] + gradient_img + edge_detected + color_cycled:
     plt.axis('off')
     plt.imshow(img)
     plt.show()
+import os; print("Current directory:", os.getcwd())
 
