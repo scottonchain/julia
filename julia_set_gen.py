@@ -35,6 +35,9 @@ def render_julia_set(width: int, height: int) -> Image:
 
     c = complex(-0.7, 0.2)
 
+    # Adjust center of Julia set
+    c = complex(0.2, 0.5)
+
     x = np.linspace(x_range[0].real, x_range[1].real, height)
     y = np.linspace(y_range[0], y_range[1], width)
     X, Y = np.meshgrid((x + 1j * (y - y_range[0])), y)
