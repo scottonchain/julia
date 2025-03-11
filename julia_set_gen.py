@@ -46,10 +46,10 @@ rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=2))  # Reduced radius for less blur
-glow = Image.blend(img, blur, alpha=0.4)  # Adjusted alpha value to make the image more vibrant
-enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.2)
+blur = img.filter(ImageFilter.GaussianBlur(radius=1))  # Reduced radius for less blur
+glow = Image.blend(img, blur, alpha=0.5)  # Adjusted alpha value to make the image more vibrant
+enhanced = ImageEnhance.Contrast(glow).enhance(1.2)
+enhanced = ImageEnhance.Color(enhanced).enhance(1.3)
 
 # Display
 plt.figure(figsize=(6, 6))
