@@ -1,3 +1,4 @@
+__file__ = __file__ if '__file__' in globals() else None
 import numpy as np
 from matplotlib import pyplot as plt
 
