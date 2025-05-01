@@ -33,10 +33,10 @@ def render_julia_set(width: int, height: int) -> Image:
     x_range = (-1.5 + 0.3j, -0.8 + 0.156j)
     y_range = (-1.4, 1.6)
 
-    c = complex(-0.7, 0.2)
+    c = complex(0.2, 0.5)
 
     # Adjust center of Julia set
-    c = complex(0.2, 0.5)
+    # c = complex(-0.7, 0.2)  # Original value
 
     x = np.linspace(x_range[0].real, x_range[1].real, height)
     y = np.linspace(y_range[0], y_range[1], width)
@@ -51,39 +51,15 @@ def render_julia_set(width: int, height: int) -> Image:
         Z[mask] = Z[mask]**2 + c
         mask_new = np.abs(Z) <= 2
         div_iter[~mask & mask_new] = i
-        mask = mask_new
+        mask &= ~mask_new
 
-    smooth = (div_iter + 1 - np.log(np.log2(np.abs(Z)))) / (smooth.max() - smooth.min())
-
-    hsv = np.zeros((height, width, 3), dtype=float)
-    hsv[..., 0] = (smooth + 1) % 1
-    hsv[..., 1] = smooth * 0.8
-    hsv[..., 2] = smooth ** 0.5
-
-    rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
-    img = Image.fromarray(rgb)
-
-    return img
-
-
-def postprocess_image(img: Image, alpha: float) -> Image:
-    """Apply glow and contrast adjustment"""
-    blur = img.filter(ImageFilter.GaussianBlur(radius=4))
-    glow = Image.blend(img, blur, alpha)
-    enhanced = ImageEnhance.Contrast(glow).enhance(1.5)
-
-    return enhanced
+    return Image.fromarray((div_iter / max_iter * 255).astype(np.uint8))
 
 
 def main():
-    width, height = 800, 800
-    img = render_julia_set(width, height)
-    enhanced_img = postprocess_image(img, 0.2)
+    img = render_julia_set(800, 600)
+    img.show()
 
-    plt.figure(figsize=(6, 6))
-    plt.axis('off')
-    plt.imshow(enhanced_img)
-    plt.show()
 
 if __name__ == "__main__":
     main()
