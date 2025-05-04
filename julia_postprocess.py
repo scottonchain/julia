@@ -1,3 +1,4 @@
+
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
@@ -43,21 +44,15 @@ hsv[..., 2] = smooth_norm ** 0.3                # Value
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-# Artistic postprocessing: glow, enhancement, texture, and noise
+# Artistic postprocessing: glow, enhancement, vignette, and contrast adjustment
 blur = img.filter(ImageFilter.GaussianBlur(radius=8))
 glow = Image.blend(img, blur, alpha=0.3)
-enhanced = ImageEnhance.Contrast(glow).enhance(1.7)
-enhanced = ImageEnhance.Color(enhanced).enhance(1.4)
-
-# Add texture and noise
-texture = img.filter(ImageFilter.MinFilter(size=5))
-noise = img.point(lambda x: 0 if random.random() < 0.2 else x, '1')
-glow_texture_noise = Image.blend(glow, texture, alpha=0.3)
-glow_texture_noise = Image.blend(glow_texture_noise, noise, alpha=0.4)
+enhanced = ImageEnhance.Contrast(glow).enhance(1.7)  # Adjust the contrast to your liking
+vignette = enhanced.convert('L').point(lambda x: min(x + 50, 255))  # Add a vignette effect
 
 # Display
 plt.figure(figsize=(6, 6))
 plt.axis('off')
-plt.imshow(glow_texture_noise)
+plt.imshow(vignette)
 plt.show()
 
