@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-0.73, 0.73)
-y_range = (-0.64, 0.64)
-c = complex(0.34, -0.21)
-max_iter = 380
+x_range = (-1.33, 1.33)
+y_range = (-1.41, 1.41)
+c = complex(-0.7, -0.38)
+max_iter = 340
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,24 +27,23 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
-hsv[..., 1] = 0.95 - 0.1 * smooth_norm
-hsv[..., 2] = smooth_norm ** 0.2
+hsv[..., 0] = (0.45 * smooth_norm + 0.1) % 1
+hsv[..., 1] = 0.9 - 0.3 * smooth_norm
+hsv[..., 2] = smooth_norm ** 0.5
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
-img = img.filter(ImageFilter.FIND_EDGES)
+img = img.filter(ImageFilter.MedianFilter(size=7))
 
-# Horizontal flip every 100 pixels
-def flip_blocks(im, block=100):
-    arr = np.array(im)
-    for i in range(0, arr.shape[0], block*2):
-        arr[i:i+block] = arr[i:i+block][::-1]
-    return Image.fromarray(arr)
+def add_stripes(im, stripe_width=20):
+    draw = ImageDraw.Draw(im)
+    for x in range(0, im.width, stripe_width*2):
+        draw.rectangle([x, 0, x+stripe_width, im.height], fill=(255,255,255,40))
+    return im
 
-img = flip_blocks(img, block=100)
-img = ImageEnhance.Contrast(img).enhance(1.8)
+img = add_stripes(img, stripe_width=30)
+img = ImageEnhance.Brightness(img).enhance(1.2)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
