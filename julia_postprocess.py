@@ -67,6 +67,3 @@ edge_detected = enhanced.filter(ImageFilter.Sobel())
 # Display the final image
 img.show()
 print("Image displayed successfully!")
-import os; print("Current directory:", os.getcwd())
-import os; print("Current directory:", os.getcwd())
-
