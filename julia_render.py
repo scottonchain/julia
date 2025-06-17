@@ -1,12 +1,12 @@
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from matplotlib.colors import hsv_to_rgb
 
 width, height = 1600, 1600
-x_range = (-1.56, 1.56)
-y_range = (-1.47, 1.47)
-c = complex(0.34, 0.01)
-max_iter = 900
+x_range = (-0.77, 0.77)
+y_range = (-0.99, 0.99)
+c = complex(-0.56, 0.45)
+max_iter = 320
 
 x = np.linspace(x_range[0], x_range[1], width)
 y = np.linspace(y_range[0], y_range[1], height)
@@ -27,14 +27,35 @@ with np.errstate(divide='ignore', invalid='ignore'):
 smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 hsv = np.zeros((height, width, 3), dtype=float)
-hsv[..., 0] = (0.8 * smooth_norm + 0.1) % 1
-hsv[..., 1] = 0.98 - 0.2 * np.abs(np.sin(2 * np.pi * smooth_norm))
+hsv[..., 0] = (0.7 * smooth_norm + 0.2) % 1
+hsv[..., 1] = 0.95 - 0.1 * np.abs(np.sin(2 * np.pi * smooth_norm))
 hsv[..., 2] = smooth_norm ** 0.2
 
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
-img = ImageEnhance.Color(img).enhance(2.0)
-img = ImageEnhance.Contrast(img).enhance(1.3)
+
+# Sepia tone
+def sepia(im):
+    arr = np.array(im).astype(np.float32)
+    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
+    tr = 0.393 * r + 0.769 * g + 0.189 * b
+    tg = 0.349 * r + 0.686 * g + 0.168 * b
+    tb = 0.272 * r + 0.534 * g + 0.131 * b
+    arr[..., 0] = np.clip(tr, 0, 255)
+    arr[..., 1] = np.clip(tg, 0, 255)
+    arr[..., 2] = np.clip(tb, 0, 255)
+    return Image.fromarray(arr.astype(np.uint8))
+
+img = sepia(img)
+img = img.filter(ImageFilter.GaussianBlur(radius=6))
+
+def vertical_wave(im, amp=12, freq=0.09):
+    arr = np.array(im)
+    for j in range(arr.shape[1]):
+        arr[:, j] = np.roll(arr[:, j], int(amp * np.sin(freq * j)))
+    return Image.fromarray(arr)
+
+img = vertical_wave(img, amp=18, freq=0.13)
 
 output_path = 'julia_output.jpg'
 img.save(output_path) 
