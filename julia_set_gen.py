@@ -8,7 +8,7 @@ WIDTH, HEIGHT = 800, 800
 MAX_ITER = 300
 
 # Artistic Julia set parameters
-x_range = (-0.7 + 1j * 0.4, -1.5 + 1j * 0.6)   # Changed the center of the julia set to make it more interesting
+x_range = (-0.7 + 1j * 0.4, -1.5 + 1j * 0.6)    # Changed the center of the julia set to make it more interesting
 y_range = (-2, 2)
 c = complex(-0.3 + 1j * 0.8)
 
@@ -37,17 +37,17 @@ smooth_norm = (smooth - smooth.min()) / (smooth.max() - smooth.min())
 
 # Build HSV image
 hsv = np.zeros((HEIGHT, WIDTH, 3), dtype=float)
-hsv[..., 0] = (smooth_norm + 0.6) % 1   # Hue
-hsv[..., 1] = smooth_norm * 0.5   # Saturation
-hsv[..., 2] = smooth_norm**0.4   # Value
+hsv[..., 0] = (smooth_norm + 0.6) % 1    # Hue
+hsv[..., 1] = smooth_norm * 0.5    # Saturation
+hsv[..., 2] = smooth_norm**0.4    # Value
 
 # Convert to RGB
 rgb = (hsv_to_rgb(hsv) * 255).astype(np.uint8)
 img = Image.fromarray(rgb)
 
 # Artistic postprocessing: glow and enhancement
-blur = img.filter(ImageFilter.GaussianBlur(radius=5))   # Increased radius for more blur
-glow = Image.blend(img, blur, alpha=0.9)   # Adjusted alpha value to make the image more vibrant
+blur = img.filter(ImageFilter.GaussianBlur(radius=5))    # Increased radius for more blur
+glow = Image.blend(img, blur, alpha=0.9)    # Adjusted alpha value to make the image more vibrant
 enhanced = ImageEnhance.Contrast(glow).enhance(1.8)
 enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
 
@@ -56,5 +56,6 @@ plt.figure(figsize=(6, 6))
 plt.axis('off')
 plt.imshow(enhanced)
 plt.show()
+
 import os; print("Current directory:", os.getcwd())
 
