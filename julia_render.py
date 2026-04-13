@@ -174,7 +174,7 @@ def main():
         brightness=1.1,
     )
 
-    output_path = "julia_output.png"
+    output_path = "julia_output.jpg"
     img.save(output_path, optimize=True)
     print(f"Saved {output_path}")
 
