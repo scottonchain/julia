@@ -6,27 +6,25 @@ from matplotlib.colors import hsv_to_rgb
 def compute_julia(
     width=1600,
     height=1600,
-    x_range=(-1.23, 1.23),
-    y_range=(-1.23, 1.23),
+    center=(-0.12, 0.74),
+    scale=0.22,
     c=complex(-0.51, 0.55),
-    max_iter=300,
+    max_iter=400,
     escape_radius=2.0,
 ):
     """
     Compute a Julia set with smooth escape-time coloring.
-    Returns:
-        smooth: normalized smooth iteration counts in [0, 1]
-        escaped: boolean mask of points that escaped
     """
+    x_range = (center[0] - scale, center[0] + scale)
+    y_range = (center[1] - scale, center[1] + scale)
+
     x = np.linspace(x_range[0], x_range[1], width, dtype=np.float64)
     y = np.linspace(y_range[0], y_range[1], height, dtype=np.float64)
     X, Y = np.meshgrid(x, y)
 
-    Z0 = X + 1j * Y
-    Z = Z0.copy()
+    Z = X + 1j * Y
 
     escaped = np.zeros(Z.shape, dtype=bool)
-    escape_iter = np.full(Z.shape, max_iter, dtype=np.int32)
     smooth = np.zeros(Z.shape, dtype=np.float64)
 
     escape_radius_sq = escape_radius * escape_radius
@@ -42,10 +40,7 @@ def compute_julia(
         just_escaped = active & (mag_sq > escape_radius_sq)
         if np.any(just_escaped):
             escaped[just_escaped] = True
-            escape_iter[just_escaped] = i
-
             abs_z = np.sqrt(mag_sq[just_escaped])
-            # Smooth iteration count
             smooth[just_escaped] = i + 1 - np.log2(np.log(abs_z))
 
     if np.any(escaped):
@@ -65,9 +60,9 @@ def colorize_julia(
     escaped,
     hue_offset=0.68,
     hue_scale=0.95,
-    saturation=0.85,
-    interior_value=0.02,
-    gamma=0.85,
+    saturation=0.9,
+    interior_value=0.015,
+    gamma=0.8,
 ):
     """
     Convert normalized smooth values into RGB using HSV mapping.
@@ -75,12 +70,10 @@ def colorize_julia(
     h, w = smooth.shape
     hsv = np.zeros((h, w, 3), dtype=np.float64)
 
-    # Escaped points get colorful mapping
     hsv[..., 0] = (hue_offset + hue_scale * smooth) % 1.0
     hsv[..., 1] = saturation
     hsv[..., 2] = np.power(smooth, gamma)
 
-    # Interior points stay dark for contrast
     hsv[~escaped, 1] = 0.0
     hsv[~escaped, 2] = interior_value
 
@@ -91,19 +84,16 @@ def colorize_julia(
 
 def pixel_sort_by_luminance(
     image,
-    threshold=70,
-    min_run_length=16,
+    threshold=75,
+    min_run_length=20,
     sort_descending=False,
 ):
     """
     Pixel-sort contiguous bright regions in each row using luminance.
-    This produces a more intentional glitch effect than sorting RGB channels
-    independently.
     """
     arr = np.array(image)
     out = arr.copy()
 
-    # Perceptual luminance
     lum = (
         0.2126 * arr[..., 0]
         + 0.7152 * arr[..., 1]
@@ -136,9 +126,9 @@ def pixel_sort_by_luminance(
 
 def enhance_image(
     image,
-    color=1.6,
-    contrast=1.2,
-    brightness=1.08,
+    color=1.8,
+    contrast=1.25,
+    brightness=1.1,
 ):
     """
     Apply gentle post-processing.
@@ -150,19 +140,13 @@ def enhance_image(
 
 
 def main():
-    width, height = 1600, 1600
-    x_range = (-1.23, 1.23)
-    y_range = (-1.23, 1.23)
-    c = complex(-0.51, 0.55)
-    max_iter = 400
-
     smooth, escaped = compute_julia(
-        width=width,
-        height=height,
-        x_range=x_range,
-        y_range=y_range,
-        c=c,
-        max_iter=max_iter,
+        width=1600,
+        height=1600,
+        center=(-0.12, 0.74),
+        scale=0.22,
+        c=complex(-0.51, 0.55),
+        max_iter=400,
         escape_radius=2.0,
     )
 
