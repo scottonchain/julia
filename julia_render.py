@@ -6,10 +6,10 @@ from matplotlib.colors import hsv_to_rgb
 def compute_julia(
     width=1600,
     height=1600,
-    center=(-0.12, 0.74),
-    scale=0.22,
+    center=(-0.745, 0.186),
+    scale=0.045,
     c=complex(-0.51, 0.55),
-    max_iter=400,
+    max_iter=700,
     escape_radius=2.0,
 ):
     """
@@ -178,6 +178,9 @@ def main():
     img.save(output_path, optimize=True)
     print(f"Saved {output_path}")
 
+    output_path = "julia_output.png"
+    img.save(output_path, optimize=True)
+    print(f"Saved {output_path}")
 
 if __name__ == "__main__":
     main()
