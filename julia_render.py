@@ -45,9 +45,12 @@ def compute_julia(
 
     if np.any(escaped):
         smin = smooth[escaped].min()
-        smax = smooth[escaped].max()
+        # A few very late escapes should not dim the rest of the image.
+        smax = np.percentile(smooth[escaped], 99.3)
         if smax > smin:
-            smooth[escaped] = (smooth[escaped] - smin) / (smax - smin)
+            smooth[escaped] = np.clip(
+                (smooth[escaped] - smin) / (smax - smin), 0.0, 1.0
+            )
         else:
             smooth[escaped] = 0.0
 
@@ -63,10 +66,22 @@ def colorize_julia(
     saturation=0.9,
     interior_value=0.015,
     gamma=0.8,
+    palette=None,
 ):
     """
-    Convert normalized smooth values into RGB using HSV mapping.
+    Color smooth values with HSV or seven RGB palette anchors.
     """
+    if palette is not None:
+        tones = np.power(smooth, gamma)
+        stops = np.array([0.0, 0.20, 0.40, 0.58, 0.76, 0.90, 1.0])
+        colors = np.asarray(palette, dtype=np.float64)
+        rgb = np.stack(
+            [np.interp(tones, stops, colors[:, channel]) for channel in range(3)],
+            axis=-1,
+        )
+        rgb[~escaped] = (5, 8, 16)
+        return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
+
     h, w = smooth.shape
     hsv = np.zeros((h, w, 3), dtype=np.float64)
 
@@ -140,42 +155,48 @@ def enhance_image(
 
 
 def main():
+    output_size = 1600
+    supersample = 2
     smooth, escaped = compute_julia(
-        width=1600,
-        height=1600,
-        center=(-0.12, 0.74),
-        scale=0.22,
+        width=output_size * supersample,
+        height=output_size * supersample,
+        center=(-0.105, 0.755),
+        scale=0.235,
         c=complex(-0.51, 0.55),
-        max_iter=400,
-        escape_radius=2.0,
+        max_iter=500,
+        escape_radius=16.0,
     )
 
     img = colorize_julia(
         smooth,
         escaped,
-        hue_offset=0.68,
-        hue_scale=0.95,
-        saturation=0.9,
-        interior_value=0.015,
-        gamma=0.8,
+        gamma=0.5,
+        # Midnight blue, jade, sea glass, and warm ivory highlights.
+        palette=[
+            (6, 10, 25), (16, 48, 72), (35, 106, 125),
+            (103, 183, 180), (208, 222, 199), (234, 197, 139),
+            (255, 244, 217),
+        ],
     )
+    img = img.resize((output_size, output_size), Image.Resampling.LANCZOS)
 
-    img = pixel_sort_by_luminance(
+    sorted_img = pixel_sort_by_luminance(
         img,
-        threshold=75,
-        min_run_length=20,
+        threshold=185,
+        min_run_length=60,
         sort_descending=False,
     )
+    img = Image.blend(img, sorted_img, 0.12)
 
     img = enhance_image(
         img,
-        color=1.8,
-        contrast=1.25,
-        brightness=1.1,
+        color=1.03,
+        contrast=1.02,
+        brightness=1.02,
     )
 
     output_path = "julia_output.jpg"
-    img.save(output_path, optimize=True)
+    img.save(output_path, quality=95, subsampling=0, optimize=True)
     print(f"Saved {output_path}")
 
     output_path = "julia_output.png"
