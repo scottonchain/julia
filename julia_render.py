@@ -162,7 +162,7 @@ def main():
         height=output_size * supersample,
         center=(-0.105, 0.755),
         scale=0.235,
-        c=complex(-0.51, 0.55),
+        c=complex(-0.513, 0.553),
         max_iter=500,
         escape_radius=16.0,
     )
@@ -170,7 +170,7 @@ def main():
     img = colorize_julia(
         smooth,
         escaped,
-        gamma=0.5,
+        gamma=0.54,
         # Midnight blue, jade, sea glass, and warm ivory highlights.
         palette=[
             (6, 10, 25), (16, 48, 72), (35, 106, 125),
