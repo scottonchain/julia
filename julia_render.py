@@ -170,23 +170,23 @@ def main():
     img = colorize_julia(
         smooth,
         escaped,
-        gamma=0.54,
-        # Midnight blue, jade, sea glass, and warm ivory highlights.
+        gamma=0.57,
+        # Lapis, sea glass, and antique-gold highlights.
         palette=[
-            (6, 10, 25), (16, 48, 72), (35, 106, 125),
-            (103, 183, 180), (208, 222, 199), (234, 197, 139),
-            (255, 244, 217),
+            (5, 8, 20), (15, 31, 58), (32, 68, 97),
+            (67, 127, 143), (145, 184, 181), (205, 177, 123),
+            (244, 224, 181),
         ],
     )
     img = img.resize((output_size, output_size), Image.Resampling.LANCZOS)
 
     sorted_img = pixel_sort_by_luminance(
         img,
-        threshold=185,
+        threshold=175,
         min_run_length=60,
         sort_descending=False,
     )
-    img = Image.blend(img, sorted_img, 0.12)
+    img = Image.blend(img, sorted_img, 0.08)
 
     img = enhance_image(
         img,
