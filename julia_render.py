@@ -156,7 +156,7 @@ def enhance_image(
 
 def main():
     output_size = 1600
-    supersample = 2
+    supersample = 3
     smooth, escaped = compute_julia(
         width=output_size * supersample,
         height=output_size * supersample,
