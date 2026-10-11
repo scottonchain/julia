@@ -1,5 +1,5 @@
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageChops, ImageEnhance, ImageFilter
 from matplotlib.colors import hsv_to_rgb
 
 
@@ -194,6 +194,10 @@ def main():
         contrast=1.02,
         brightness=1.02,
     )
+
+    # Add a restrained optical bloom without softening the fractal boundary.
+    glow = img.filter(ImageFilter.GaussianBlur(5.5))
+    img = Image.blend(img, ImageChops.screen(img, glow), 0.07)
 
     output_path = "julia_output.jpg"
     img.save(output_path, quality=95, subsampling=0, optimize=True)
