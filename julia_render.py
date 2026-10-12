@@ -195,9 +195,15 @@ def main():
         brightness=1.02,
     )
 
-    # Add a restrained optical bloom without softening the fractal boundary.
-    glow = img.filter(ImageFilter.GaussianBlur(5.5))
-    img = Image.blend(img, ImageChops.screen(img, glow), 0.07)
+    # Let only the brightest filigree emit a restrained optical bloom.
+    rgb = np.asarray(img, dtype=np.float32)
+    luminance = 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+    glow_weight = np.clip((luminance - 115.0) / 140.0, 0.0, 1.0) ** 1.25
+    glow_source = Image.fromarray(
+        np.clip(rgb * glow_weight[..., None], 0, 255).astype(np.uint8)
+    )
+    glow = glow_source.filter(ImageFilter.GaussianBlur(6.5))
+    img = Image.blend(img, ImageChops.screen(img, glow), 0.22)
 
     output_path = "julia_output.jpg"
     img.save(output_path, quality=95, subsampling=0, optimize=True)
