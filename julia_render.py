@@ -205,6 +205,9 @@ def main():
     glow = glow_source.filter(ImageFilter.GaussianBlur(6.5))
     img = Image.blend(img, ImageChops.screen(img, glow), 0.22)
 
+    # Recover fine recursive edgework after downsampling and the selective bloom.
+    img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=20, threshold=4))
+
     output_path = "julia_output.jpg"
     img.save(output_path, quality=95, subsampling=0, optimize=True)
     print(f"Saved {output_path}")
