@@ -161,7 +161,7 @@ def main():
         width=output_size * supersample,
         height=output_size * supersample,
         center=(-0.105, 0.755),
-        scale=0.235,
+        scale=0.242,
         c=complex(-0.513, 0.553),
         max_iter=500,
         escape_radius=16.0,
