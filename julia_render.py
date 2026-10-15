@@ -170,7 +170,7 @@ def main():
     img = colorize_julia(
         smooth,
         escaped,
-        gamma=0.57,
+        gamma=0.60,
         # Lapis, sea glass, and antique-gold highlights.
         palette=[
             (5, 8, 20), (15, 31, 58), (32, 68, 97),
