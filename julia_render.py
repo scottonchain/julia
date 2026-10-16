@@ -171,11 +171,11 @@ def main():
         smooth,
         escaped,
         gamma=0.60,
-        # Lapis, sea glass, and antique-gold highlights.
+        # Lapis and jade-toned sea glass, with warm bronze-to-gold highlights.
         palette=[
             (5, 8, 20), (15, 31, 58), (32, 68, 97),
-            (67, 127, 143), (145, 184, 181), (218, 177, 108),
-            (244, 224, 181),
+            (67, 127, 143), (143, 180, 164), (216, 162, 107),
+            (242, 221, 183),
         ],
     )
     img = img.resize((output_size, output_size), Image.Resampling.LANCZOS)
